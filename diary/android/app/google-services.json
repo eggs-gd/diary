@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "24354789873",
+    "project_id": "awareness-journal",
+    "storage_bucket": "awareness-journal.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:24354789873:android:16be829b33fbd09ff3cc50",
+        "android_client_info": {
+          "package_name": "gd.eggs.diary"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDgvYCjNF_DfdL114JTJ6Phdt8N004hfm4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

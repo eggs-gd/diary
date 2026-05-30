@@ -1,0 +1,59 @@
+{
+	"app": {
+		"title": "觀明",
+		"description": "An attention archive for events, resonance, and later reflection.",
+		"scrollToTop": "Top",
+		"tagline": "attention archive"
+	},
+	"capture": {
+		"event": "What happened",
+		"placeholder": "Capture the event briefly...",
+		"resonance": "Event resonance",
+		"save": "Save"
+	},
+	"archive": {
+		"title": "Archive",
+		"empty": "Quiet for now. Your first events will appear after saving.",
+		"return": "return"
+	},
+	"analysis": {
+		"title": "Event reflection",
+		"negativeTitle": "Return to a difficult event",
+		"positiveTitle": "Return to a good event",
+		"event": "Event",
+		"negativeReason": "What upset you about this",
+		"negativeAbout": "What does this event say about you",
+		"negativeView": "Are there other perspectives on this situation",
+		"negativeActions": "How will you act next time to feel better",
+		"positiveReason": "What delighted you about this",
+		"positiveAbout": "What does this situation say about you",
+		"positiveView": "Is there something else here you did not notice at first",
+		"positiveActions": "How will you act so there are more moments like this",
+		"edit": "Edit",
+		"fieldDone": "Save",
+		"prev": "Back",
+		"next": "Next",
+		"resonanceQuestion": "Has the resonance changed after reflection?",
+		"saveReflection": "Save reflection",
+		"score": "Resonance: {score}"
+	},
+	"common": {
+		"close": "Close"
+	},
+	"profile": {
+		"open": "Profile",
+		"title": "Profile",
+		"clearArchive": "Clear archive",
+		"clearConfirm": "The archive will be cleared locally on this device.",
+		"clearNow": "Clear",
+		"archiveTitle": "Entry archive",
+		"archiveEmpty": "There are no entries in the archive yet.",
+		"selectAll": "Select all",
+		"deleteSelected": "Delete selected ({count})"
+	},
+	"locale": {
+		"label": "Language",
+		"uk": "Українська",
+		"en": "English"
+	}
+}
