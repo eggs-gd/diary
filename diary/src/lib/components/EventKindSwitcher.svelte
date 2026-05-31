@@ -5,10 +5,10 @@
 	import { hapticLight } from '$lib/platform/native';
 
 	interface Props {
-		value?: EventKind;
+		value?: EventKind | null;
 	}
 
-	let { value = $bindable<EventKind>('event') }: Props = $props();
+	let { value = $bindable<EventKind | null>(null) }: Props = $props();
 
 	const i18n = useI18n();
 

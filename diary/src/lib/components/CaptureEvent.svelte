@@ -6,7 +6,7 @@
 	import QuizTextField from '$lib/components/QuizTextField.svelte';
 	import { AppIcon } from '$lib/icons';
 	import type { EventEntry } from '$lib/events/types';
-	import { DEFAULT_EVENT_KIND, type EventKind } from '$lib/events/types';
+	import type { EventKind } from '$lib/events/types';
 	import { useI18n } from '$lib/i18n';
 	import { hapticLight } from '$lib/platform/native';
 	import { track } from '$lib/analytics';
@@ -15,7 +15,7 @@
 	interface Props {
 		open: boolean;
 		initialText?: string;
-		initialKind?: EventKind;
+		initialKind?: EventKind | null;
 		initialScore?: number;
 		initialCreatedAt?: string;
 		focusKey?: number;
@@ -26,7 +26,7 @@
 	let {
 		open,
 		initialText = '',
-		initialKind = DEFAULT_EVENT_KIND,
+		initialKind = null,
 		initialScore = 0,
 		initialCreatedAt,
 		focusKey = 0,
@@ -40,18 +40,23 @@
 	const BUFFER_LINES = 1;
 
 	let eventText = $state('');
-	let eventKind = $state<EventKind>(DEFAULT_EVENT_KIND);
+	let eventKind = $state<EventKind | null>(null);
 	let score = $state(0);
 	let inputFocused = $state(false);
 	let saving = $state(false);
 	let createdAtOverride = $state<string | null>(null);
 	let resizeTrigger = $state(0);
+	let validationAnimating = $state(false);
+	let validationTimer: ReturnType<typeof setTimeout> | null = null;
 
-	const canSave = $derived(eventText.trim().length > 0 && !saving);
+	const textMissing = $derived(eventText.trim().length === 0);
+	const kindMissing = $derived(eventKind === null);
+	const scoreMissing = $derived(score === 0);
+	const canSubmit = $derived(!saving);
 
 	function resetForm(
 		text = '',
-		kind: EventKind = DEFAULT_EVENT_KIND,
+		kind: EventKind | null = null,
 		scoreValue = 0,
 		createdAt: string | null = null
 	): void {
@@ -60,6 +65,11 @@
 		score = scoreValue;
 		createdAtOverride = createdAt;
 		inputFocused = false;
+		validationAnimating = false;
+		if (validationTimer) {
+			clearTimeout(validationTimer);
+			validationTimer = null;
+		}
 	}
 
 	async function focusInput(options: { haptic?: boolean } = {}): Promise<void> {
@@ -75,8 +85,20 @@
 
 	async function persist(andAnother: boolean): Promise<void> {
 		const text = eventText.trim();
-		if (!text || saving) {
-			void focusInput();
+		if (!text || eventKind === null || score === 0 || saving) {
+			if (validationTimer) {
+				clearTimeout(validationTimer);
+				validationTimer = null;
+			}
+			validationAnimating = false;
+			await tick();
+			validationAnimating = true;
+			validationTimer = setTimeout(() => {
+				validationAnimating = false;
+				validationTimer = null;
+			}, 460);
+			if (!text) void focusInput();
+			void hapticLight();
 			return;
 		}
 
@@ -96,7 +118,7 @@
 			void hapticLight();
 
 			if (andAnother) {
-				resetForm('', eventKind, score, createdAtOverride);
+				resetForm('', initialKind, initialScore, createdAtOverride);
 				await focusInput({ haptic: false });
 			} else {
 				onClose();
@@ -107,7 +129,14 @@
 	}
 
 	$effect(() => {
-		if (!open) return;
+		if (!open) {
+			validationAnimating = false;
+			if (validationTimer) {
+				clearTimeout(validationTimer);
+				validationTimer = null;
+			}
+			return;
+		}
 		focusKey;
 		resetForm(
 			initialText,
@@ -150,26 +179,32 @@
 			<div class="capture-gap" aria-hidden="true"></div>
 
 			<section class="capture-step" aria-labelledby="capture-event-title">
-				<EventKindSwitcher bind:value={eventKind} />
+				<div class:invalid-control={validationAnimating && kindMissing}>
+					<EventKindSwitcher bind:value={eventKind} />
+				</div>
 
-				<QuizTextField
-					bind:value={eventText}
-					bind:focused={inputFocused}
-					placeholder={i18n.t('analysis.writePlaceholder')}
-					ariaLabel={i18n.t('capture.event')}
-					minLines={MIN_LINES}
-					bufferLines={BUFFER_LINES}
-					{resizeTrigger}
-					{editIcon}
-				/>
+				<div class:invalid-control={validationAnimating && textMissing}>
+					<QuizTextField
+						bind:value={eventText}
+						bind:focused={inputFocused}
+						placeholder={i18n.t('analysis.writePlaceholder')}
+						ariaLabel={i18n.t('capture.event')}
+						minLines={MIN_LINES}
+						bufferLines={BUFFER_LINES}
+						{resizeTrigger}
+						{editIcon}
+					/>
+				</div>
 
-				<ScorePicker bind:value={score} ariaLabel={i18n.t('capture.resonance')} />
+				<div class:invalid-control={validationAnimating && scoreMissing}>
+					<ScorePicker bind:value={score} ariaLabel={i18n.t('capture.resonance')} />
+				</div>
 
 				<nav class="capture-nav capture-step__footer" aria-label={i18n.t('capture.newEvent')}>
 					<button
 						type="submit"
 						class="quiz-arrow"
-						disabled={!canSave}
+						disabled={!canSubmit}
 						aria-label={i18n.t('capture.save')}
 					>
 						<AppIcon name="check" />
@@ -178,7 +213,7 @@
 					<button
 						type="button"
 						class="quiz-arrow"
-						disabled={!canSave}
+						disabled={!canSubmit}
 						aria-label={i18n.t('capture.saveAndAnother')}
 						onclick={() => persist(true)}
 					>
@@ -257,6 +292,61 @@
 
 	.capture-step :global(.score-picker-wrap) {
 		margin-top: var(--space-3);
+	}
+
+	.invalid-control {
+		animation: validation-shake 420ms var(--ease);
+	}
+
+	.invalid-control :global(.quiz-input) {
+		animation: validation-warmth 420ms var(--ease);
+	}
+
+	.invalid-control :global(.score-picker-dot) {
+		animation: validation-dot-warmth 420ms var(--ease);
+	}
+
+	@keyframes validation-shake {
+		0%,
+		100% {
+			transform: translateX(0);
+		}
+		20% {
+			transform: translateX(-0.22rem);
+		}
+		40% {
+			transform: translateX(0.18rem);
+		}
+		60% {
+			transform: translateX(-0.12rem);
+		}
+		80% {
+			transform: translateX(0.08rem);
+		}
+	}
+
+	@keyframes validation-warmth {
+		0%,
+		100% {
+			border-color: var(--border);
+			background-color: transparent;
+		}
+		45% {
+			border-color: color-mix(in srgb, var(--accent-rose) 54%, var(--border));
+			background-color: color-mix(in srgb, var(--accent-rose) 9%, transparent);
+		}
+	}
+
+	@keyframes validation-dot-warmth {
+		0%,
+		100% {
+			filter: none;
+			transform: scale(1);
+		}
+		45% {
+			filter: brightness(1.55) saturate(1.35);
+			transform: scale(1.18);
+		}
 	}
 
 	.capture-step__footer {

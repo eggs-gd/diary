@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { Capacitor } from '@capacitor/core';
 	import CaptureEvent from '$lib/components/CaptureEvent.svelte';
 	import ReflectionEvent from '$lib/components/ReflectionEvent.svelte';
 	import ReflectionReport from '$lib/components/ReflectionReport.svelte';
@@ -8,6 +9,7 @@
 	import ReflectEntryCard from '$lib/components/ReflectEntryCard.svelte';
 	import ReflectStatusIcon from '$lib/components/ReflectStatusIcon.svelte';
 	import ScoreDots from '$lib/components/ScoreDots.svelte';
+	import { AppButton, AppFullscreen, AppPopup } from '$lib/components/ui';
 	import { AppIcon } from '$lib/icons';
 	import { entriesForDay, formatDayLabel, groupEventEntries, createdAtForDayKey } from '$lib/events/grouping';
 	import {
@@ -15,7 +17,7 @@
 		flattenYearEntries,
 		medianEventScore
 	} from '$lib/events/period-score';
-	import { DEFAULT_EVENT_KIND, normalizeEventKind, type EventKind } from '$lib/events/types';
+	import { normalizeEventKind, type EventKind } from '$lib/events/types';
 	import { getReflectionStatus } from '$lib/events/reflection-status';
 	import { dayReflectionDisplayIcon } from '$lib/events/reflection-display';
 	import {
@@ -28,18 +30,22 @@
 	import { useReflectionTone } from '$lib/preferences/reflection-tone.svelte';
 	import { hapticLight } from '$lib/platform/native';
 	import { initShareIntent } from '$lib/platform/share-intent';
+	import { buildAgentPrompt, buildArchiveMarkdown, archiveFilename } from '$lib/events/export';
+	import { resolveWeekStart } from '$lib/preferences/week-start';
+	import { useWeekStart } from '$lib/preferences/week-start.svelte';
 	import { eventStore } from '$lib/state/events.svelte';
 	import { dayReflectionStore } from '$lib/state/day-reflections.svelte';
 	import { track, trackVisible } from '$lib/analytics';
 
 	const i18n = useI18n();
 	const reflectionTone = useReflectionTone();
+	const weekStart = useWeekStart();
 
 	const groupedEntries = $derived(groupEventEntries(eventStore.entries, i18n.locale));
 
 	let captureOpen = $state(false);
 	let captureInitialText = $state('');
-	let captureInitialKind = $state<EventKind>(DEFAULT_EVENT_KIND);
+	let captureInitialKind = $state<EventKind | null>(null);
 	let captureInitialScore = $state(0);
 	let captureCreatedAt = $state<string | undefined>(undefined);
 	let captureFocusKey = $state(0);
@@ -100,7 +106,7 @@
 		options?: { dayKey?: string; kind?: EventKind; score?: number }
 	): void {
 		captureInitialText = text;
-		captureInitialKind = options?.kind ?? DEFAULT_EVENT_KIND;
+		captureInitialKind = options?.kind ?? null;
 		captureInitialScore = options?.score ?? 0;
 		captureCreatedAt = options?.dayKey ? createdAtForDayKey(options.dayKey) : undefined;
 		captureFocusKey += 1;
@@ -124,6 +130,147 @@
 		calendarOpen = true;
 		track('calendar_opened');
 		void hapticLight();
+	}
+
+	let exportPreviewOpen = $state(false);
+	let exportPreviewText = $state('');
+	let exportPreviewFilename = $state('');
+	let exportCopied = $state(false);
+	let exportSettingsOpen = $state(false);
+	let exportRange = $state<ExportRange>('today');
+	let exportMode = $state<ExportMode>('report');
+
+	type ExportRange = 'today' | 'week' | 'month';
+	type ExportMode = 'report' | 'agent';
+
+	const exportEntries = $derived(
+		filterEntriesByRange(
+			eventStore.entries,
+			exportRange,
+			resolveWeekStart(weekStart.preference, i18n.locale)
+		)
+	);
+
+	const exportRangeOptions: { value: ExportRange; labelKey: string }[] = [
+		{ value: 'today', labelKey: 'archive.exportToday' },
+		{ value: 'week', labelKey: 'archive.exportWeek' },
+		{ value: 'month', labelKey: 'archive.exportMonth' }
+	];
+
+	const exportModeOptions: { value: ExportMode; labelKey: string }[] = [
+		{ value: 'report', labelKey: 'archive.exportModeReport' },
+		{ value: 'agent', labelKey: 'archive.exportModeAgent' }
+	];
+
+	function startOfToday(): Date {
+		const now = new Date();
+		return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+	}
+
+	function addDays(date: Date, days: number): Date {
+		const next = new Date(date);
+		next.setDate(next.getDate() + days);
+		return next;
+	}
+
+	function exportBounds(range: ExportRange, firstDayOfWeek: 0 | 1): { start: Date; end: Date } {
+		const today = startOfToday();
+
+		if (range === 'today') {
+			return { start: today, end: addDays(today, 1) };
+		}
+
+		if (range === 'month') {
+			return {
+				start: new Date(today.getFullYear(), today.getMonth(), 1),
+				end: new Date(today.getFullYear(), today.getMonth() + 1, 1)
+			};
+		}
+
+		const offset = (today.getDay() - firstDayOfWeek + 7) % 7;
+		const start = addDays(today, -offset);
+		return { start, end: addDays(start, 7) };
+	}
+
+	function filterEntriesByRange(
+		entries: EventEntry[],
+		range: ExportRange,
+		firstDayOfWeek: 0 | 1
+	): EventEntry[] {
+		const { start, end } = exportBounds(range, firstDayOfWeek);
+		return entries.filter((entry) => {
+			const created = new Date(entry.createdAt);
+			return created >= start && created < end;
+		});
+	}
+
+	function openExportSettings(): void {
+		exportSettingsOpen = true;
+		exportCopied = false;
+		track('archive_export_settings_opened');
+		void hapticLight();
+	}
+
+	async function exportArchive(): Promise<void> {
+		if (!exportEntries.length) return;
+
+		const md = buildArchiveMarkdown(
+			groupEventEntries(exportEntries, i18n.locale),
+			dayReflectionStore.byDayKey,
+			(k, p) => i18n.t(k, p),
+			i18n.locale
+		);
+		const payload = exportMode === 'agent' ? buildAgentPrompt(md, i18n.locale) : md;
+		const filename = archiveFilename();
+
+		track('archive_exported', {
+			entries: exportEntries.length,
+			range: exportRange,
+			mode: exportMode
+		});
+		void hapticLight();
+		exportSettingsOpen = false;
+
+		// Native Share Sheet: send actual text, not an .md attachment.
+		if (Capacitor.isNativePlatform() && typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+			try {
+				await navigator.share({
+					title: filename,
+					text: payload
+				});
+				return;
+			} catch (err) {
+				if (err instanceof Error && err.name === 'AbortError') return;
+			}
+		}
+
+		// Web -> show preview
+		exportPreviewText = payload;
+		exportPreviewFilename = filename;
+		exportPreviewOpen = true;
+		exportCopied = false;
+	}
+
+	function exportDownload(): void {
+		const blob = new Blob([exportPreviewText], { type: 'text/plain; charset=utf-8' });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = exportPreviewFilename;
+		document.body.appendChild(a);
+		a.click();
+		setTimeout(() => {
+			URL.revokeObjectURL(url);
+			a.remove();
+		}, 2000);
+	}
+
+	async function exportCopy(): Promise<void> {
+		try {
+			await navigator.clipboard.writeText(exportPreviewText);
+			exportCopied = true;
+			setTimeout(() => (exportCopied = false), 2000);
+		} catch {}
 	}
 
 	function openDayReflection(dayKey: string, returnTo: 'archive' | 'calendar' = 'archive'): void {
@@ -151,6 +298,16 @@
 		<div class="archive-head">
 			<h2 class="archive-title">{i18n.t('archive.title')}</h2>
 			<div class="archive-actions">
+				{#if eventStore.entries.length > 0}
+					<button
+						type="button"
+						class="archive-icon-btn"
+						aria-label={i18n.t('archive.share')}
+						onclick={openExportSettings}
+					>
+						<AppIcon name="share" />
+					</button>
+				{/if}
 				<button
 					type="button"
 					class="archive-icon-btn"
@@ -309,7 +466,7 @@
 			score: updated.protocol?.reflectionScore ?? updated.score
 		});
 		void hapticLight();
-		selectedEntry = updated;
+		selectedEntry = null;
 	}}
 />
 
@@ -322,6 +479,86 @@
 		selectedEntry = updated;
 	}}
 />
+
+<AppPopup
+	open={exportSettingsOpen}
+	title={i18n.t('archive.exportSettingsTitle')}
+	titleId="archive-export-settings-title"
+	onClose={() => (exportSettingsOpen = false)}
+>
+	{#snippet children()}
+		<div class="export-settings">
+			<section class="export-setting-group" aria-labelledby="archive-export-range-title">
+				<h4 id="archive-export-range-title" class="export-setting-title">
+					{i18n.t('archive.exportRange')}
+				</h4>
+				<div class="export-segmented">
+					{#each exportRangeOptions as option}
+						<button
+							type="button"
+							class="export-segment"
+							class:active={exportRange === option.value}
+							aria-pressed={exportRange === option.value}
+							onclick={() => (exportRange = option.value)}
+						>
+							{i18n.t(option.labelKey)}
+						</button>
+					{/each}
+				</div>
+			</section>
+
+			<section class="export-setting-group" aria-labelledby="archive-export-mode-title">
+				<h4 id="archive-export-mode-title" class="export-setting-title">
+					{i18n.t('archive.exportMode')}
+				</h4>
+				<div class="export-segmented">
+					{#each exportModeOptions as option}
+						<button
+							type="button"
+							class="export-segment"
+							class:active={exportMode === option.value}
+							aria-pressed={exportMode === option.value}
+							onclick={() => (exportMode = option.value)}
+						>
+							{i18n.t(option.labelKey)}
+						</button>
+					{/each}
+				</div>
+			</section>
+
+			<p class="export-count">
+				{i18n.t('archive.exportSelectedCount', { count: exportEntries.length })}
+			</p>
+		</div>
+	{/snippet}
+
+	{#snippet footer()}
+		<AppButton variant="primary" disabled={exportEntries.length === 0} onclick={() => void exportArchive()}>
+			{i18n.t('archive.exportContinue')}
+		</AppButton>
+	{/snippet}
+</AppPopup>
+
+<AppFullscreen
+	open={exportPreviewOpen}
+	title={exportPreviewFilename || i18n.t('archive.share')}
+	titleId="archive-export-title"
+	onClose={() => (exportPreviewOpen = false)}
+>
+	{#snippet children()}
+		<div class="export-preview">
+			<div class="export-actions">
+				<AppButton variant="secondary" onclick={exportDownload}>
+					{i18n.t('archive.download')}
+				</AppButton>
+				<AppButton variant="secondary" onclick={() => void exportCopy()}>
+					{exportCopied ? i18n.t('archive.copied') : i18n.t('archive.copy')}
+				</AppButton>
+			</div>
+			<pre class="export-text">{exportPreviewText}</pre>
+		</div>
+	{/snippet}
+</AppFullscreen>
 
 <style>
 	.main {
@@ -546,9 +783,113 @@
 		border-bottom: none;
 	}
 
+	.export-settings {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-4);
+	}
+
+	.export-setting-group {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-2);
+	}
+
+	.export-setting-title {
+		margin: 0;
+		color: var(--text-faint);
+		font-size: var(--text-xs);
+		font-weight: 500;
+		text-transform: uppercase;
+		letter-spacing: var(--tracking-wide);
+	}
+
+	.export-segmented {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: var(--space-1);
+	}
+
+	.export-setting-group:nth-child(2) .export-segmented {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.export-segment {
+		min-height: var(--size-touch);
+		padding: var(--space-2);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: transparent;
+		color: var(--text-faint);
+		font: inherit;
+		font-size: var(--text-xs);
+		text-transform: uppercase;
+		letter-spacing: var(--tracking-wide);
+		cursor: pointer;
+		transition: var(--transition-interactive);
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	.export-segment:hover,
+	.export-segment:focus-visible {
+		border-color: var(--accent-dim);
+		color: var(--text-muted);
+		outline: none;
+	}
+
+	.export-segment.active {
+		border-color: var(--accent-dim);
+		background: var(--fill-muted);
+		color: var(--text);
+	}
+
+	.export-count {
+		margin: 0;
+		color: var(--text-muted);
+		font-size: var(--text-sm);
+	}
+
+	.export-preview {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-4);
+		width: 100%;
+		max-width: var(--content-max-width);
+		margin: 0 auto;
+	}
+
+	.export-actions {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: var(--space-2);
+	}
+
+	.export-text {
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+		margin: 0;
+		padding: var(--space-4);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: var(--bg-elevated);
+		color: var(--text-soft);
+		font-family: var(--font-sans);
+		font-size: var(--text-sm);
+		line-height: var(--leading-normal);
+	}
+
 	@media (max-width: 24rem) {
 		.entries :global(.reflect-entry__head) {
 			flex-wrap: wrap;
+		}
+
+		.export-actions {
+			grid-template-columns: 1fr;
+		}
+
+		.export-segmented,
+		.export-setting-group:nth-child(2) .export-segmented {
+			grid-template-columns: 1fr;
 		}
 	}
 </style>

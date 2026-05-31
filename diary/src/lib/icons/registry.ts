@@ -11,6 +11,7 @@ import {
 	Pencil,
 	Plus,
 	RefreshCw,
+	Share2,
 	User
 } from '@lucide/svelte';
 
@@ -38,7 +39,8 @@ export const ICONS = {
 	reflectComplete: FileText,
 	reflectEmpty: Pencil,
 	reflectPartial: NotebookPen,
-	scrollTop: ChevronUp
+	scrollTop: ChevronUp,
+	share: Share2
 } as const satisfies Record<string, IconComponent>;
 
 export type IconName = keyof typeof ICONS;
