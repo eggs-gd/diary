@@ -9,9 +9,10 @@
 	interface Props {
 		value?: number;
 		ariaLabel: string;
+		onUserChange?: () => void;
 	}
 
-	let { value = $bindable(0), ariaLabel }: Props = $props();
+	let { value = $bindable(0), ariaLabel, onUserChange }: Props = $props();
 
 	let track = $state<HTMLElement | null>(null);
 	let dragging = $state(false);
@@ -25,6 +26,7 @@
 		if (rect.width <= 0) return;
 		const ratio = (clientX - rect.left) / rect.width;
 		value = scoreFromPickerRatio(ratio);
+		onUserChange?.();
 	}
 
 	function onPointerDown(event: PointerEvent): void {
@@ -49,6 +51,7 @@
 
 	function selectDot(dotValue: number): void {
 		value = clampScore(dotValue);
+		onUserChange?.();
 	}
 </script>
 
@@ -71,10 +74,12 @@
 			if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') {
 				event.preventDefault();
 				value = clampScore(value - 1);
+				onUserChange?.();
 			}
 			if (event.key === 'ArrowRight' || event.key === 'ArrowUp') {
 				event.preventDefault();
 				value = clampScore(value + 1);
+				onUserChange?.();
 			}
 		}}
 	>

@@ -60,35 +60,31 @@
 	}
 
 	.week-start-btn {
-		display: grid;
-		place-items: center;
-		width: var(--size-touch);
-		height: var(--size-touch);
-		padding: 0;
-		border: 1px solid var(--border);
-		border-radius: var(--radius-full);
-		background: var(--overlay-elevated);
-		backdrop-filter: blur(6px);
-		color: var(--text-muted);
+		min-height: var(--size-touch);
+		padding: 0 var(--space-1);
+		border: none;
+		border-radius: 0;
+		background: transparent;
+		color: var(--text-faint);
+		font-family: var(--font-sans);
 		font-size: var(--text-xs);
 		font-weight: 500;
 		letter-spacing: var(--tracking-wide);
 		text-transform: uppercase;
-		transition: var(--transition-fade);
+		cursor: pointer;
+		transition: color var(--transition-interactive);
 		user-select: none;
+		-webkit-tap-highlight-color: transparent;
 	}
 
-	.week-start-btn:hover {
-		border-color: var(--accent-dim);
-		color: var(--text);
-		transform: scale(1.05);
+	.week-start-btn:hover,
+	.week-start-btn:focus-visible {
+		color: var(--text-muted);
+		outline: none;
 	}
 
 	.week-start-btn.active {
-		border-color: var(--accent);
-		background: var(--fill-muted);
 		color: var(--text);
-		box-shadow: 0 0 0 1px var(--fill-muted);
 	}
 
 	.label {

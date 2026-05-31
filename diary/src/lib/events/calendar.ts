@@ -1,3 +1,4 @@
+import type { DayReflectionCalendarState } from './day-reflection';
 import type { Locale } from './types';
 import type { WeekStart } from '$lib/preferences/week-start';
 import { localDateKey } from './grouping';
@@ -8,6 +9,7 @@ export interface CalendarCell {
 	inMonth: boolean;
 	count: number;
 	isToday: boolean;
+	reflectionStatus: DayReflectionCalendarState | null;
 }
 
 function dateKeyFromParts(year: number, month: number, day: number): string {
@@ -28,7 +30,8 @@ export function buildMonthCells(
 	month: number,
 	counts: Map<string, number>,
 	todayKey: string,
-	weekStartsOn: WeekStart
+	weekStartsOn: WeekStart,
+	reflectionStates: Map<string, DayReflectionCalendarState> = new Map()
 ): CalendarCell[] {
 	const first = new Date(year, month, 1);
 	const firstWeekday = (first.getDay() - weekStartsOn + 7) % 7;
@@ -41,18 +44,21 @@ export function buildMonthCells(
 			day: 0,
 			inMonth: false,
 			count: 0,
-			isToday: false
+			isToday: false,
+			reflectionStatus: null
 		});
 	}
 
 	for (let day = 1; day <= daysInMonth; day += 1) {
 		const key = dateKeyFromParts(year, month, day);
+		const count = counts.get(key) ?? 0;
 		cells.push({
 			key,
 			day,
 			inMonth: true,
-			count: counts.get(key) ?? 0,
-			isToday: key === todayKey
+			count,
+			isToday: key === todayKey,
+			reflectionStatus: count > 0 ? (reflectionStates.get(key) ?? 'not_started') : null
 		});
 	}
 
@@ -63,7 +69,8 @@ export function buildMonthCells(
 			day: 0,
 			inMonth: false,
 			count: 0,
-			isToday: false
+			isToday: false,
+			reflectionStatus: null
 		});
 		padIndex += 1;
 	}

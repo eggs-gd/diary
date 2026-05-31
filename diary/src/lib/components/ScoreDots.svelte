@@ -4,15 +4,16 @@
 	interface Props {
 		original: number;
 		reflected?: number;
+		compact?: boolean;
 	}
 
-	let { original, reflected }: Props = $props();
+	let { original, reflected, compact = false }: Props = $props();
 
 	const dots = $derived(buildScoreDots(original, reflected));
 	const label = $derived(scoreDotsLabel(original, reflected));
 </script>
 
-<div class="score-dots" role="img" aria-label={label}>
+<div class="score-dots" class:score-dots--compact={compact} role="img" aria-label={label}>
 	{#each dots as dot, index (index)}
 		{#if dot.tone === 'gap'}
 			<span class="score-dot-gap" aria-hidden="true"></span>
@@ -70,5 +71,17 @@
 
 	.score-dot--gray {
 		background: color-mix(in srgb, var(--text-faint) 38%, transparent);
+	}
+
+	.score-dots--compact {
+		flex: 0 0 auto;
+		gap: 0.15rem;
+		min-height: 0.25rem;
+	}
+
+	.score-dots--compact .score-dot,
+	.score-dots--compact .score-dot-gap {
+		width: 0.21875rem;
+		height: 0.21875rem;
 	}
 </style>

@@ -2,10 +2,14 @@
 	import { tick } from 'svelte';
 	import { AppFullscreen } from '$lib/components/ui';
 	import ScorePicker from '$lib/components/ScorePicker.svelte';
+	import EventKindSwitcher from '$lib/components/EventKindSwitcher.svelte';
+	import { AppIcon } from '$lib/icons';
+	import { normalizeEventKind, type EventKind } from '$lib/events/event-kind';
 	import type { EventEntry, ReflectionProtocol } from '$lib/events/types';
 	import { useI18n } from '$lib/i18n';
 	import { hapticLight } from '$lib/platform/native';
 	import { shouldSaveReflectionScore } from '$lib/events/reflection-status';
+	import { resizeQuizTextarea } from '$lib/utils/resize-quiz-textarea';
 
 	interface Props {
 		open: boolean;
@@ -27,6 +31,7 @@
 		actions: ''
 	});
 	let reflectionScore = $state(0);
+	let eventKind = $state<EventKind>('event');
 	let editingEvent = $state(false);
 	let saving = $state(false);
 	let stepIndex = $state(0);
@@ -65,6 +70,7 @@
 			actions: p?.actions ?? ''
 		};
 		reflectionScore = p?.reflectionScore ?? entry.score;
+		eventKind = normalizeEventKind(entry.kind);
 	});
 
 	$effect(() => {
@@ -89,30 +95,10 @@
 		const wrap = quizInputWrap;
 		if (!el || !wrap) return;
 
-		const hidden = el.classList.contains('quiz-input--hidden');
-		if (hidden) {
-			el.style.position = 'static';
-			el.style.opacity = '0';
-			el.style.pointerEvents = 'none';
-		}
-
-		el.style.height = 'auto';
-
-		const lineHeight = parseFloat(getComputedStyle(el).lineHeight);
-		if (!Number.isFinite(lineHeight) || lineHeight <= 0) return;
-
-		const contentLines = Math.max(1, Math.ceil(el.scrollHeight / lineHeight));
-		const totalLines = Math.max(QUIZ_MIN_LINES, contentLines + QUIZ_BUFFER_LINES);
-		const height = `${totalLines * lineHeight}px`;
-
-		wrap.style.minHeight = height;
-		el.style.height = height;
-
-		if (hidden) {
-			el.style.position = '';
-			el.style.opacity = '';
-			el.style.pointerEvents = '';
-		}
+		resizeQuizTextarea(el, wrap, {
+			minLines: QUIZ_MIN_LINES,
+			bufferLines: QUIZ_BUFFER_LINES
+		});
 	}
 
 	function resizeEventInput(): void {
@@ -187,7 +173,7 @@
 		} else if (entry.protocol?.reflectionScore !== undefined) {
 			protocol.reflectionScore = entry.protocol.reflectionScore;
 		}
-		return { ...entry, text: draft.event.trim() || entry.text, protocol };
+		return { ...entry, text: draft.event.trim() || entry.text, kind: eventKind, protocol };
 	}
 
 	async function persistDraft(): Promise<void> {
@@ -240,11 +226,7 @@
 </script>
 
 {#snippet editIcon()}
-	<svg class="inline-edit-icon" viewBox="0 0 24 24" aria-hidden="true">
-		<path
-			d="M4 17.5V20h2.5L17 9.5 14.5 7 4 17.5Zm14.7-8.8a1 1 0 0 0 0-1.4l-1-1a1 1 0 0 0-1.4 0l-1 1 2.4 2.4 1-1Z"
-		/>
-	</svg>
+	<AppIcon name="edit" class="inline-edit-icon" />
 {/snippet}
 
 {#snippet header()}
@@ -301,6 +283,7 @@
 					</h2>
 
 					{#if isResonanceStep}
+						<EventKindSwitcher bind:value={eventKind} />
 						<ScorePicker
 							bind:value={reflectionScore}
 							ariaLabel={i18n.t('analysis.resonanceQuestion')}
@@ -331,7 +314,7 @@
 								class="quiz-input"
 								class:quiz-input--hidden={showInputDisplay}
 								bind:value={draft[currentField]}
-								rows={QUIZ_MIN_LINES}
+								rows="1"
 								aria-label={reflectionLabel(currentField)}
 								onfocus={() => (inputFocused = true)}
 								onblur={() => (inputFocused = false)}
@@ -348,9 +331,7 @@
 							aria-label={i18n.t('analysis.prev')}
 							onclick={() => void goBack()}
 						>
-							<svg viewBox="0 0 24 24" aria-hidden="true">
-								<path d="M15.41 16.59 10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41Z" />
-							</svg>
+							<AppIcon name="chevronLeft" />
 						</button>
 
 						{#if isResonanceStep}
@@ -361,11 +342,7 @@
 								aria-label={i18n.t('analysis.saveReflection')}
 								onclick={() => void completeReflection()}
 							>
-								<svg viewBox="0 0 24 24" aria-hidden="true">
-									<path
-										d="M9.55 17.05 4.5 12l1.4-1.42 3.65 3.65 8.55-8.55 1.4 1.42-9.95 9.97Z"
-									/>
-								</svg>
+								<AppIcon name="check" />
 							</button>
 						{:else}
 							<button
@@ -375,9 +352,7 @@
 								aria-label={i18n.t('analysis.next')}
 								onclick={() => void goForward()}
 							>
-								<svg viewBox="0 0 24 24" aria-hidden="true">
-									<path d="M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41Z" />
-								</svg>
+								<AppIcon name="chevronRight" />
 							</button>
 						{/if}
 					</nav>
@@ -462,24 +437,23 @@
 		outline: none;
 	}
 
-	.inline-edit-icon {
+	:global(svg.inline-edit-icon) {
 		display: inline-block;
 		width: 1.125rem;
 		height: 1.125rem;
 		margin-inline-start: 0.25em;
 		vertical-align: -0.12em;
-		fill: currentColor;
 		color: var(--text-soft);
 	}
 
-	.event-header__title .inline-edit-icon {
+	.event-header__title :global(svg.inline-edit-icon) {
 		width: 1.375rem;
 		height: 1.375rem;
 		vertical-align: -0.14em;
 		color: var(--text);
 	}
 
-	.quiz-input-display .inline-edit-icon {
+	.quiz-input-display :global(svg.inline-edit-icon) {
 		width: 1.25rem;
 		height: 1.25rem;
 		vertical-align: -0.14em;
@@ -504,6 +478,10 @@
 	.quiz-step {
 		display: flex;
 		flex-direction: column;
+	}
+
+	.quiz-step :global(.kind-switcher) {
+		margin-bottom: var(--space-3);
 	}
 
 	.quiz-step__footer {
@@ -570,7 +548,7 @@
 		word-break: break-word;
 	}
 
-	.quiz-input-placeholder .inline-edit-icon {
+	.quiz-input-placeholder :global(svg.inline-edit-icon) {
 		color: var(--text-soft);
 	}
 
@@ -636,10 +614,9 @@
 		-webkit-tap-highlight-color: transparent;
 	}
 
-	.quiz-arrow svg {
+	.quiz-arrow :global(svg.app-icon) {
 		width: var(--text-lg);
 		height: var(--text-lg);
-		fill: currentColor;
 	}
 
 	.quiz-arrow:hover:not(:disabled),

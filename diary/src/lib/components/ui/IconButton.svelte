@@ -78,10 +78,9 @@
 		color: var(--text);
 	}
 
-	.icon-btn :global(svg) {
+	.icon-btn :global(svg.app-icon) {
 		display: block;
 		width: var(--text-lg);
 		height: var(--text-lg);
-		fill: currentColor;
 	}
 </style>

@@ -5,6 +5,7 @@ import {
 } from '@capacitor-community/sqlite';
 import { Preferences } from '@capacitor/preferences';
 import type { EventEntry } from '$lib/events/types';
+import { normalizeEventKind } from '$lib/events/event-kind';
 import { LocalEventRepository } from './event-local';
 import { EVENTS_MIGRATED_KEY, EVENTS_STORAGE_KEY, type EventRepository } from './event-repository';
 
@@ -20,11 +21,25 @@ CREATE TABLE IF NOT EXISTS events (
 );
 `;
 
+const CREATE_DAY_REFLECTIONS_TABLE = `
+CREATE TABLE IF NOT EXISTS day_reflections (
+	day_key TEXT PRIMARY KEY NOT NULL,
+	next_actions TEXT NOT NULL DEFAULT '',
+	insights TEXT NOT NULL DEFAULT '',
+	day_score INTEGER,
+	next_actions_edited INTEGER NOT NULL DEFAULT 0,
+	insights_edited INTEGER NOT NULL DEFAULT 0,
+	score_edited INTEGER NOT NULL DEFAULT 0,
+	updated_at TEXT NOT NULL
+);
+`;
+
 type EventRow = {
 	id: string;
 	created_at: string;
 	event_text: string;
 	resonance: number;
+	kind: string | null;
 	protocol_json: string | null;
 };
 
@@ -40,6 +55,7 @@ function rowToEvent(row: EventRow): EventEntry {
 		createdAt: row.created_at,
 		text: row.event_text,
 		score: row.resonance,
+		kind: normalizeEventKind(row.kind),
 		protocol: row.protocol_json ? JSON.parse(row.protocol_json) : undefined
 	};
 }
@@ -52,6 +68,38 @@ async function ensureSchema(database: SQLiteDBConnection): Promise<void> {
 	if (!hasProtocolJson) {
 		await database.execute(`ALTER TABLE events ADD COLUMN protocol_json TEXT`);
 	}
+
+	const hasKind = rows.some((row) => row.name === 'kind');
+	if (!hasKind) {
+		await database.execute(`ALTER TABLE events ADD COLUMN kind TEXT NOT NULL DEFAULT 'event'`);
+	}
+
+	await database.execute(CREATE_DAY_REFLECTIONS_TABLE);
+
+	const reflectionInfo = await database.query(`PRAGMA table_info(day_reflections)`);
+	const reflectionRows = (reflectionInfo.values ?? []) as TableInfoRow[];
+	if (!reflectionRows.some((row) => row.name === 'day_score')) {
+		await database.execute(`ALTER TABLE day_reflections ADD COLUMN day_score INTEGER`);
+	}
+	if (!reflectionRows.some((row) => row.name === 'next_actions_edited')) {
+		await database.execute(
+			`ALTER TABLE day_reflections ADD COLUMN next_actions_edited INTEGER NOT NULL DEFAULT 0`
+		);
+	}
+	if (!reflectionRows.some((row) => row.name === 'insights_edited')) {
+		await database.execute(
+			`ALTER TABLE day_reflections ADD COLUMN insights_edited INTEGER NOT NULL DEFAULT 0`
+		);
+	}
+	if (!reflectionRows.some((row) => row.name === 'score_edited')) {
+		await database.execute(
+			`ALTER TABLE day_reflections ADD COLUMN score_edited INTEGER NOT NULL DEFAULT 0`
+		);
+	}
+}
+
+export async function getAppDatabase(): Promise<SQLiteDBConnection> {
+	return getDatabase();
 }
 
 async function getDatabase(): Promise<SQLiteDBConnection> {
@@ -67,12 +115,13 @@ async function getDatabase(): Promise<SQLiteDBConnection> {
 
 async function insertEvent(database: SQLiteDBConnection, entry: EventEntry): Promise<void> {
 	await database.run(
-		`INSERT OR REPLACE INTO events (id, created_at, event_text, resonance, protocol_json) VALUES (?, ?, ?, ?, ?)`,
+		`INSERT OR REPLACE INTO events (id, created_at, event_text, resonance, kind, protocol_json) VALUES (?, ?, ?, ?, ?, ?)`,
 		[
 			entry.id,
 			entry.createdAt,
 			entry.text,
 			entry.score,
+			entry.kind,
 			entry.protocol ? JSON.stringify(entry.protocol) : null
 		]
 	);
@@ -105,7 +154,7 @@ export class SqliteEventRepository implements EventRepository {
 	async loadAll(): Promise<EventEntry[]> {
 		const database = await getDatabase();
 		const result = await database.query(
-			`SELECT id, created_at, event_text, resonance, protocol_json FROM events ORDER BY created_at DESC`
+			`SELECT id, created_at, event_text, resonance, kind, protocol_json FROM events ORDER BY created_at DESC`
 		);
 
 		const rows = (result.values ?? []) as EventRow[];

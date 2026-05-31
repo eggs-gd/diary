@@ -2,29 +2,72 @@
 	import { onMount } from 'svelte';
 	import CaptureEvent from '$lib/components/CaptureEvent.svelte';
 	import ReflectionEvent from '$lib/components/ReflectionEvent.svelte';
+	import ReflectionReport from '$lib/components/ReflectionReport.svelte';
+	import ReflectionDay from '$lib/components/ReflectionDay.svelte';
 	import ArchiveCalendar from '$lib/components/ArchiveCalendar.svelte';
+	import ReflectEntryCard from '$lib/components/ReflectEntryCard.svelte';
+	import ReflectStatusIcon from '$lib/components/ReflectStatusIcon.svelte';
 	import ScoreDots from '$lib/components/ScoreDots.svelte';
-	import { groupEventEntries } from '$lib/events/grouping';
+	import { AppIcon } from '$lib/icons';
+	import { entriesForDay, formatDayLabel, groupEventEntries, createdAtForDayKey } from '$lib/events/grouping';
+	import {
+		flattenMonthEntries,
+		flattenYearEntries,
+		medianEventScore
+	} from '$lib/events/period-score';
+	import { DEFAULT_EVENT_KIND, normalizeEventKind, type EventKind } from '$lib/events/types';
 	import { getReflectionStatus, type ReflectionStatus } from '$lib/events/reflection-status';
+	import { dayReflectionDisplayIcon } from '$lib/events/reflection-display';
+	import {
+		getDayReflectionCalendarState,
+		type DayReflectionCalendarState
+	} from '$lib/events/day-reflection';
 	import type { EventEntry } from '$lib/events/types';
 	import { useI18n } from '$lib/i18n';
+	import { useReflectionTone } from '$lib/preferences/reflection-tone.svelte';
 	import { hapticLight } from '$lib/platform/native';
 	import { initShareIntent } from '$lib/platform/share-intent';
 	import { eventStore } from '$lib/state/events.svelte';
+	import { dayReflectionStore } from '$lib/state/day-reflections.svelte';
 	import { track, trackVisible } from '$lib/analytics';
 
 	const i18n = useI18n();
+	const reflectionTone = useReflectionTone();
 
 	const groupedEntries = $derived(groupEventEntries(eventStore.entries, i18n.locale));
 
 	let captureOpen = $state(false);
 	let captureInitialText = $state('');
+	let captureInitialKind = $state<EventKind>(DEFAULT_EVENT_KIND);
+	let captureInitialScore = $state(0);
+	let captureCreatedAt = $state<string | undefined>(undefined);
 	let captureFocusKey = $state(0);
 	let selectedEntry = $state<EventEntry | null>(null);
 	let calendarOpen = $state(false);
+	let calendarResetView = $state(true);
+	let reflectionDayOpen = $state(false);
+	let reflectionDayKey = $state('');
+	let reflectionDayLabel = $state('');
+	let reflectionDayReturnTo = $state<'archive' | 'calendar'>('archive');
+
+	const reflectionDayEntries = $derived(
+		reflectionDayOpen && reflectionDayKey
+			? entriesForDay(eventStore.entries, reflectionDayKey)
+			: []
+	);
+
+	const dayReflections = $derived(dayReflectionStore.reflections);
+
+	const reflectionReportOpen = $derived(
+		selectedEntry !== null && getReflectionStatus(selectedEntry) === 'complete'
+	);
+	const reflectionWizardOpen = $derived(
+		selectedEntry !== null && getReflectionStatus(selectedEntry) !== 'complete'
+	);
 
 	onMount(() => {
 		void eventStore.load();
+		void dayReflectionStore.load();
 		let teardownShareIntent: (() => void) | null = null;
 		void initShareIntent((text) => {
 			openCapture(text);
@@ -44,8 +87,29 @@
 		return map[status];
 	}
 
-	function openCapture(text = ''): void {
+	function dayReflectionActionLabel(dayKey: string, state: DayReflectionCalendarState): string {
+		const dayLabel = formatDayLabel(dayKey, i18n.locale);
+		const count = entriesForDay(eventStore.entries, dayKey).length;
+		const map: Record<DayReflectionCalendarState, string> = {
+			not_started: i18n.t('archive.dayReflectionNotStarted', { day: dayLabel, count }),
+			partial: i18n.t('archive.dayReflectionPartial', { day: dayLabel, count }),
+			complete: i18n.t('archive.dayReflectionComplete', { day: dayLabel, count })
+		};
+		return map[state];
+	}
+
+	function eventKindLabel(kind: EventKind): string {
+		return kind === 'act' ? i18n.t('capture.kindAct') : i18n.t('capture.kindEvent');
+	}
+
+	function openCapture(
+		text = '',
+		options?: { dayKey?: string; kind?: EventKind; score?: number }
+	): void {
 		captureInitialText = text;
+		captureInitialKind = options?.kind ?? DEFAULT_EVENT_KIND;
+		captureInitialScore = options?.score ?? 0;
+		captureCreatedAt = options?.dayKey ? createdAtForDayKey(options.dayKey) : undefined;
 		captureFocusKey += 1;
 		captureOpen = true;
 		track('capture_opened');
@@ -63,19 +127,25 @@
 	}
 
 	function openCalendar(): void {
+		calendarResetView = true;
 		calendarOpen = true;
 		track('calendar_opened');
 		void hapticLight();
 	}
 
-	function jumpToDay(dayKey: string): void {
+	function openDayReflection(dayKey: string, returnTo: 'archive' | 'calendar' = 'archive'): void {
+		reflectionDayReturnTo = returnTo;
+		calendarResetView = false;
 		calendarOpen = false;
-		requestAnimationFrame(() => {
-			document.getElementById(`journal-day-${dayKey}`)?.scrollIntoView({
-				behavior: 'smooth',
-				block: 'start'
-			});
+		reflectionDayKey = dayKey;
+		reflectionDayLabel = formatDayLabel(dayKey, i18n.locale);
+		reflectionDayOpen = true;
+		track('day_reflection_opened', {
+			day: dayKey,
+			count: entriesForDay(eventStore.entries, dayKey).length,
+			from: returnTo
 		});
+		void hapticLight();
 	}
 </script>
 
@@ -94,9 +164,7 @@
 					aria-label={i18n.t('capture.newEvent')}
 					onclick={() => openCapture()}
 				>
-					<svg viewBox="0 0 24 24" aria-hidden="true">
-						<path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
-					</svg>
+					<AppIcon name="add" />
 				</button>
 				<button
 					type="button"
@@ -104,11 +172,7 @@
 					aria-label={i18n.t('archive.openCalendar')}
 					onclick={openCalendar}
 				>
-					<svg viewBox="0 0 24 24" aria-hidden="true">
-						<path
-							d="M19 4h-1V2h-2v2H8V2H6v2H5a1.99 1.99 0 0 0-1.99 1.99V20A1.99 1.99 0 0 0 5 22h14c1.1 0 2-.9 2-2V6c0-1.2-.9-2-2-2Zm0 16H5V10h14v10ZM7 12h2v2H7v-2Zm4 0h2v2h-2v-2Zm4 0h2v2h-2v-2Zm-8 4h2v2H7v-2Zm4 0h2v2h-2v-2Zm4 0h2v2h-2v-2Z"
-						/>
-					</svg>
+					<AppIcon name="calendar" />
 				</button>
 			</div>
 		</div>
@@ -118,58 +182,66 @@
 		{:else}
 			<div class="entries-grouped">
 				{#each groupedEntries as year (year.key)}
+					{@const yearEntries = flattenYearEntries(year)}
+					{@const yearScore = medianEventScore(yearEntries)}
 					<section class="group-year" aria-labelledby="journal-year-{year.key}">
-						<h3 class="group-year-label" id="journal-year-{year.key}">{year.label}</h3>
+						<div class="group-year-head">
+							<h3 class="group-year-label" id="journal-year-{year.key}">{year.label}</h3>
+							{#if yearScore !== null}
+								<ScoreDots compact original={yearScore} />
+							{/if}
+						</div>
 						{#each year.months as month (month.key)}
+							{@const monthEntries = flattenMonthEntries(month)}
+							{@const monthScore = medianEventScore(monthEntries)}
 							<section class="group-month" aria-labelledby="journal-month-{month.key}">
-								<h4 class="group-month-label" id="journal-month-{month.key}">{month.label}</h4>
+								<div class="group-month-head">
+									<h4 class="group-month-label" id="journal-month-{month.key}">{month.label}</h4>
+									{#if monthScore !== null}
+										<ScoreDots compact original={monthScore} />
+									{/if}
+								</div>
 								{#each month.days as day (day.key)}
+									{@const dayScore = medianEventScore(day.entries)}
+									{@const dayReflectionState = getDayReflectionCalendarState(
+										dayReflectionStore.get(day.key)
+									)}
+									{@const dayDisplayIcon = dayReflectionDisplayIcon(
+										reflectionTone.preference,
+										dayReflectionState
+									)}
 									<section class="group-day" aria-labelledby="journal-day-{day.key}">
-										<h5 class="group-day-label" id="journal-day-{day.key}">{day.label}</h5>
+										<button
+											type="button"
+											class="day-head-card"
+											aria-label={dayReflectionActionLabel(day.key, dayReflectionState)}
+											onclick={() => openDayReflection(day.key)}
+										>
+											<h5 class="group-day-label" id="journal-day-{day.key}">{day.label}</h5>
+											<div class="group-day-actions">
+												{#if dayScore !== null}
+													<ScoreDots compact original={dayScore} />
+												{/if}
+												{#if dayDisplayIcon}
+													<ReflectStatusIcon name={dayDisplayIcon} />
+												{/if}
+											</div>
+										</button>
 										<ul class="entries">
 											{#each day.entries as entry (entry.id)}
 												{@const reflectStatus = getReflectionStatus(entry)}
 												<li>
-													<article class="entry">
-														<div class="entry-head">
-															<p class="entry-text">{entry.text}</p>
-															<time class="entry-time" datetime={entry.createdAt}>
-																{new Date(entry.createdAt).toLocaleTimeString(
-																	i18n.locale === 'uk' ? 'uk-UA' : 'en-US',
-																	{ hour: '2-digit', minute: '2-digit' }
-																)}
-															</time>
-														</div>
-														<div class="entry-foot">
-															<ScoreDots
-																original={entry.score}
-																reflected={entry.protocol?.reflectionScore}
-															/>
-															<button
-																type="button"
-																class="reflect-action"
-																class:reflect-action--empty={reflectStatus === 'empty'}
-																class:reflect-action--partial={reflectStatus === 'partial'}
-																class:reflect-action--complete={reflectStatus === 'complete'}
-																aria-label={reflectActionLabel(reflectStatus)}
-																onclick={() => openAnalysis(entry)}
-															>
-																{#if reflectStatus === 'complete'}
-																	<svg viewBox="0 0 24 24" aria-hidden="true">
-																		<path
-																			d="M12 4V1 8 5 12 1v3c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0 0 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74A7.93 7.93 0 0 0 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"
-																		/>
-																	</svg>
-																{:else}
-																	<svg viewBox="0 0 24 24" aria-hidden="true">
-																		<path
-																			d="M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41Z"
-																		/>
-																	</svg>
-																{/if}
-															</button>
-														</div>
-													</article>
+													<ReflectEntryCard
+														{entry}
+														{reflectStatus}
+														actionLabel={reflectActionLabel(reflectStatus)}
+														kindLabel={eventKindLabel(normalizeEventKind(entry.kind))}
+														timeLabel={new Date(entry.createdAt).toLocaleTimeString(
+															i18n.locale === 'uk' ? 'uk-UA' : 'en-US',
+															{ hour: '2-digit', minute: '2-digit' }
+														)}
+														onOpen={() => openAnalysis(entry)}
+													/>
 												</li>
 											{/each}
 										</ul>
@@ -187,6 +259,9 @@
 <CaptureEvent
 	open={captureOpen}
 	initialText={captureInitialText}
+	initialKind={captureInitialKind}
+	initialScore={captureInitialScore}
+	initialCreatedAt={captureCreatedAt}
 	focusKey={captureFocusKey}
 	onClose={() => (captureOpen = false)}
 	onSave={handleCaptureSave}
@@ -195,12 +270,40 @@
 <ArchiveCalendar
 	open={calendarOpen}
 	entries={eventStore.entries}
+	dayReflections={dayReflections}
+	resetView={calendarResetView}
 	onClose={() => (calendarOpen = false)}
-	onSelectDay={jumpToDay}
+	onSelectDay={(dayKey) => openDayReflection(dayKey, 'calendar')}
+/>
+
+<ReflectionDay
+	open={reflectionDayOpen}
+	dayKey={reflectionDayKey}
+	label={reflectionDayLabel}
+	entries={reflectionDayEntries}
+	saved={dayReflectionStore.get(reflectionDayKey) ?? null}
+	onClose={() => {
+		reflectionDayOpen = false;
+		if (reflectionDayReturnTo === 'calendar') {
+			calendarResetView = false;
+			calendarOpen = true;
+		}
+	}}
+	onPersist={async (reflection) => {
+		await dayReflectionStore.save(reflection);
+	}}
+	onAddEntry={(preset) => {
+		openCapture('', {
+			dayKey: reflectionDayKey,
+			kind: preset.kind,
+			score: preset.score
+		});
+	}}
+	onOpenEntry={openAnalysis}
 />
 
 <ReflectionEvent
-	open={selectedEntry !== null}
+	open={reflectionWizardOpen}
 	entry={selectedEntry}
 	onClose={() => (selectedEntry = null)}
 	onPersist={async (updated) => {
@@ -213,7 +316,17 @@
 			score: updated.protocol?.reflectionScore ?? updated.score
 		});
 		void hapticLight();
-		selectedEntry = null;
+		selectedEntry = updated;
+	}}
+/>
+
+<ReflectionReport
+	open={reflectionReportOpen}
+	entry={selectedEntry}
+	onClose={() => (selectedEntry = null)}
+	onPersist={async (updated) => {
+		await eventStore.update(updated);
+		selectedEntry = updated;
 	}}
 />
 
@@ -284,10 +397,9 @@
 		-webkit-tap-highlight-color: transparent;
 	}
 
-	.archive-icon-btn svg {
+	.archive-icon-btn :global(svg.app-icon) {
 		width: 1.375rem;
 		height: 1.375rem;
-		fill: currentColor;
 	}
 
 	.archive-icon-btn:hover,
@@ -322,12 +434,31 @@
 		font-weight: 400;
 	}
 
+	.group-year-head,
+	.group-month-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--space-3);
+		min-width: 0;
+	}
+
 	.group-year-label {
+		flex: 1;
+		min-width: 0;
 		font-family: var(--font-serif);
 		font-size: var(--text-xl);
 		color: var(--text-muted);
 		letter-spacing: var(--tracking-caps);
 		margin-bottom: var(--space-4);
+	}
+
+	.group-year-head {
+		margin-bottom: var(--space-4);
+	}
+
+	.group-month-head {
+		margin-bottom: var(--space-3);
 	}
 
 	.group-month {
@@ -339,11 +470,21 @@
 	}
 
 	.group-month-label {
+		flex: 1;
+		min-width: 0;
 		font-size: var(--text-sm);
 		text-transform: uppercase;
 		letter-spacing: var(--tracking-wide);
 		color: var(--text-faint);
 		margin-bottom: var(--space-3);
+	}
+
+	.group-year-head .group-year-label {
+		margin-bottom: 0;
+	}
+
+	.group-month-head .group-month-label {
+		margin-bottom: 0;
 	}
 
 	.group-day {
@@ -355,10 +496,47 @@
 	}
 
 	.group-day-label {
+		flex: 1;
+		min-width: 0;
 		font-family: var(--font-serif);
 		font-size: var(--text-lg);
 		color: var(--text-muted);
 		margin-bottom: var(--space-1);
+	}
+
+	.day-head-card {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--space-3);
+		width: 100%;
+		min-width: 0;
+		margin: 0 0 var(--space-1);
+		padding: var(--space-1) 0;
+		border: none;
+		border-radius: 0;
+		background: transparent;
+		text-align: left;
+		cursor: pointer;
+		transition: background var(--transition-interactive);
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	.day-head-card:hover,
+	.day-head-card:focus-visible {
+		background: var(--fill-subtle);
+		outline: none;
+	}
+
+	.day-head-card .group-day-label {
+		margin-bottom: 0;
+	}
+
+	.group-day-actions {
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
+		flex-shrink: 0;
 	}
 
 	.entries {
@@ -371,95 +549,12 @@
 		border: none;
 	}
 
-	.entry {
-		display: grid;
-		gap: var(--space-2);
-		padding: var(--space-3) 0;
-		border-bottom: 1px solid var(--border);
-	}
-
-	.entry-head {
-		display: flex;
-		align-items: flex-start;
-		justify-content: space-between;
-		gap: var(--space-3);
-	}
-
-	.entry-text {
-		flex: 1;
-		min-width: 0;
-		font-size: var(--text-base);
-		color: var(--text-soft);
-		line-height: var(--leading-tight);
-		display: -webkit-box;
-		-webkit-line-clamp: 2;
-		line-clamp: 2;
-		-webkit-box-orient: vertical;
-		overflow: hidden;
-	}
-
-	.entry-time {
-		flex-shrink: 0;
-		font-size: var(--text-sm);
-		color: var(--text-faint);
-		white-space: nowrap;
-	}
-
-	.entry-foot {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: var(--space-3);
-	}
-
-	.reflect-action {
-		display: inline-flex;
-		flex-shrink: 0;
-		margin-left: auto;
-		align-items: center;
-		justify-content: center;
-		width: 1.875rem;
-		height: 1.875rem;
-		padding: 0;
-		border: none;
-		background: none;
-		color: var(--text-faint);
-		cursor: pointer;
-		transition: color var(--transition-interactive);
-		-webkit-tap-highlight-color: transparent;
-	}
-
-	.reflect-action svg {
-		width: 1.375rem;
-		height: 1.375rem;
-		fill: currentColor;
-	}
-
-	.reflect-action--empty {
-		color: var(--accent);
-	}
-
-	.reflect-action--partial {
-		color: var(--text-faint);
-	}
-
-	.reflect-action--complete {
-		color: var(--text-muted);
-	}
-
-	.reflect-action:hover,
-	.reflect-action:focus-visible {
-		color: var(--text-soft);
-		outline: none;
-	}
-
-	.reflect-action--empty:hover,
-	.reflect-action--empty:focus-visible {
-		color: var(--accent-dim);
+	.entries li:last-child :global(.reflect-entry) {
+		border-bottom: none;
 	}
 
 	@media (max-width: 24rem) {
-		.entry-head {
+		.entries :global(.reflect-entry__head) {
 			flex-wrap: wrap;
 		}
 	}

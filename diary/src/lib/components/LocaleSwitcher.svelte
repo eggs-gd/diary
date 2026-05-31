@@ -55,31 +55,30 @@
 	.locale-btn {
 		display: grid;
 		place-items: center;
-		width: var(--size-touch);
+		min-width: var(--size-touch);
 		height: var(--size-touch);
 		padding: 0;
-		border: 1px solid var(--border);
-		border-radius: var(--radius-full);
-		background: var(--overlay-elevated);
-		backdrop-filter: blur(6px);
-		transition: var(--transition-fade);
+		border: none;
+		border-radius: 0;
+		background: transparent;
+		cursor: pointer;
+		transition: opacity var(--transition-interactive);
 		user-select: none;
+		-webkit-tap-highlight-color: transparent;
 	}
 
 	.locale-btn:hover {
-		border-color: var(--accent-dim);
-		color: var(--text);
-		transform: scale(1.05);
-	}
-
-	.locale-btn.active {
-		border-color: var(--accent);
-		background: var(--fill-muted);
-		box-shadow: 0 0 0 1px var(--fill-muted);
+		opacity: 0.85;
 	}
 
 	.flag {
 		font-size: var(--text-lg);
 		line-height: 1;
+		opacity: 0.4;
+		transition: opacity var(--transition-interactive);
+	}
+
+	.locale-btn.active .flag {
+		opacity: 1;
 	}
 </style>

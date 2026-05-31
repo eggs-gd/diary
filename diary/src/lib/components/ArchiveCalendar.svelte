@@ -17,7 +17,11 @@
 		weekdayLabels
 	} from '$lib/events/calendar';
 	import type { CalendarCell } from '$lib/events/calendar';
-	import type { EventEntry } from '$lib/events/types';
+	import { reflectionCalendarStateByDay } from '$lib/events/day-reflection';
+	import { medianEventScoreByMonth } from '$lib/events/period-score';
+	import type { DayReflection, EventEntry } from '$lib/events/types';
+	import ScoreDots from '$lib/components/ScoreDots.svelte';
+	import { AppIcon } from '$lib/icons';
 	import { useI18n } from '$lib/i18n';
 	import { resolveWeekStart } from '$lib/preferences/week-start';
 	import { useWeekStart } from '$lib/preferences';
@@ -26,11 +30,20 @@
 	interface Props {
 		open: boolean;
 		entries: EventEntry[];
+		dayReflections: DayReflection[];
+		resetView?: boolean;
 		onClose: () => void;
 		onSelectDay: (dayKey: string) => void;
 	}
 
-	let { open, entries, onClose, onSelectDay }: Props = $props();
+	let {
+		open,
+		entries,
+		dayReflections,
+		resetView = true,
+		onClose,
+		onSelectDay
+	}: Props = $props();
 
 	const INITIAL_PAST = 2;
 	const INITIAL_FUTURE = 2;
@@ -44,6 +57,8 @@
 
 	const entryDates = $derived(entries.map((entry) => entry.createdAt));
 	const countsByDay = $derived(entryCountsByDay(entryDates));
+	const monthScores = $derived(medianEventScoreByMonth(entries));
+	const reflectionStateMap = $derived(reflectionCalendarStateByDay(dayReflections));
 	const weekdays = $derived.by(() => weekdayLabels(i18n.locale, resolvedWeekStart));
 	const monthOptions = $derived(monthSelectOptions(i18n.locale));
 	const yearBounds = $derived(calendarYearBounds(entryDates));
@@ -64,6 +79,7 @@
 	let headerYear = $state(new Date().getFullYear());
 	let headerMonth = $state(new Date().getMonth());
 	let syncingFromScroll = $state(false);
+	let wasOpen = $state(false);
 
 	const monthKeys = $derived(iterMonthKeys(rangeStart, rangeEnd));
 
@@ -211,7 +227,25 @@
 
 	function monthCells(key: string): CalendarCell[] {
 		const { year, month } = parseMonthKey(key);
-		return buildMonthCells(year, month, countsByDay, today, resolvedWeekStart);
+		return buildMonthCells(
+			year,
+			month,
+			countsByDay,
+			today,
+			resolvedWeekStart,
+			reflectionStateMap
+		);
+	}
+
+	function dayAriaLabel(cell: CalendarCell): string {
+		if (cell.count === 0) return String(cell.day);
+		if (cell.reflectionStatus === 'complete') {
+			return i18n.t('archive.dayReflectionComplete', { day: cell.day, count: cell.count });
+		}
+		if (cell.reflectionStatus === 'partial') {
+			return i18n.t('archive.dayReflectionPartial', { day: cell.day, count: cell.count });
+		}
+		return i18n.t('archive.dayReflectionNotStarted', { day: cell.day, count: cell.count });
 	}
 
 	function releaseHeaderFocus(): void {
@@ -222,10 +256,24 @@
 	}
 
 	$effect(() => {
-		if (!open) return;
-		resetCalendarView();
+		if (!open) {
+			wasOpen = false;
+			return;
+		}
+
+		const justOpened = !wasOpen;
+		wasOpen = true;
+
+		if (justOpened && resetView) {
+			resetCalendarView();
+		}
+
+		if (!justOpened) return;
+
 		void tick().then(() => {
-			scrollToMonthKey(monthKey(headerYear, headerMonth), 'auto');
+			if (resetView) {
+				scrollToMonthKey(monthKey(headerYear, headerMonth), 'auto');
+			}
 			releaseHeaderFocus();
 			requestAnimationFrame(releaseHeaderFocus);
 		});
@@ -319,6 +367,7 @@
 
 				{#each monthKeys as key (key)}
 					{@const parsed = parseMonthKey(key)}
+					{@const monthScore = monthScores.get(key)}
 					{@const monthName =
 						monthOptions.find((option) => option.value === parsed.month)?.label ?? ''}
 					<section
@@ -327,7 +376,12 @@
 						aria-labelledby="calendar-month-{key}"
 					>
 						<div class="calendar-month-head">
-							<h2 class="calendar-month-name" id="calendar-month-{key}">{monthName}</h2>
+							<div class="calendar-month-title">
+								<h2 class="calendar-month-name" id="calendar-month-{key}">{monthName}</h2>
+								{#if monthScore !== undefined}
+									<ScoreDots compact original={monthScore} />
+								{/if}
+							</div>
 							<p class="calendar-month-year">{parsed.year}</p>
 						</div>
 
@@ -339,14 +393,23 @@
 										class="calendar-day"
 										class:calendar-day--today={cell.isToday}
 										class:calendar-day--has-entries={cell.count > 0}
+										class:calendar-day--reflection-complete={cell.reflectionStatus === 'complete'}
+										class:calendar-day--reflection-partial={cell.reflectionStatus === 'partial'}
+										class:calendar-day--reflection-not-started={cell.reflectionStatus === 'not_started'}
 										disabled={cell.count === 0}
-										aria-label={cell.count > 0
-											? i18n.t('archive.dayEntries', { count: cell.count, day: cell.day })
-											: String(cell.day)}
+										aria-label={dayAriaLabel(cell)}
 										onclick={() => selectDay(cell)}
 									>
 										<span class="calendar-day__num">{cell.day}</span>
-										{#if cell.count > 0}
+										{#if cell.reflectionStatus === 'complete'}
+											<span class="calendar-day__check calendar-day__check--complete" aria-hidden="true">
+												<AppIcon name="check" />
+											</span>
+										{:else if cell.reflectionStatus === 'partial'}
+											<span class="calendar-day__check calendar-day__check--partial" aria-hidden="true">
+												<AppIcon name="check" />
+											</span>
+										{:else if cell.reflectionStatus === 'not_started'}
 											<span class="calendar-day__mark" aria-hidden="true"></span>
 										{/if}
 									</button>
@@ -366,6 +429,7 @@
 
 <style>
 	.calendar-head {
+		position: relative;
 		display: flex;
 		flex-direction: column;
 		gap: 0.5em;
@@ -409,26 +473,26 @@
 
 	.calendar-head-row {
 		display: flex;
-		flex-wrap: wrap;
 		align-items: stretch;
 		gap: 0.5em;
 		width: 100%;
 		min-width: 0;
+		--calendar-head-control-height: 2.25rem;
 	}
 
 	.calendar-head-pickers {
 		display: flex;
+		flex: 0 0 auto;
 		align-items: stretch;
-		flex: 1 1 12em;
-		max-width: 66.666%;
-		min-width: 0;
 		gap: 0.5em;
+		min-width: 0;
 	}
 
 	.calendar-select {
 		appearance: none;
 		box-sizing: border-box;
-		height: 2.25em;
+		height: var(--calendar-head-control-height);
+		min-height: var(--calendar-head-control-height);
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
 		background: var(--fill-subtle);
@@ -448,12 +512,14 @@
 	}
 
 	.calendar-select--month {
-		flex: 1 1 auto;
+		flex: 0 1 auto;
+		width: auto;
+		max-width: 11em;
 		min-width: 0;
 	}
 
 	.calendar-select--year {
-		flex: 0 1 auto;
+		flex: 0 0 auto;
 		width: 5.5em;
 		min-width: 0;
 		font-variant-numeric: tabular-nums;
@@ -461,20 +527,23 @@
 
 	.calendar-today-btn {
 		box-sizing: border-box;
-		height: 2.25em;
+		height: var(--calendar-head-control-height);
+		min-height: var(--calendar-head-control-height);
 		margin-left: auto;
-		flex: 0 1 auto;
-		display: inline-flex;
+		flex: 0 0 auto;
+		align-self: stretch;
+		display: flex;
 		align-items: center;
 		justify-content: center;
-		padding: 0 0.75em;
+		padding: 0 1em;
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
 		background: var(--fill-subtle);
 		color: var(--text-muted);
 		font-family: var(--font-sans);
-		font-size: 0.65em;
+		font-size: 0.75em;
 		font-weight: 500;
+		line-height: 1;
 		letter-spacing: var(--tracking-wide);
 		text-transform: uppercase;
 		cursor: pointer;
@@ -540,9 +609,15 @@
 
 	.calendar-month-head {
 		display: flex;
-		align-items: baseline;
+		align-items: flex-start;
 		justify-content: space-between;
 		gap: var(--space-3);
+	}
+
+	.calendar-month-title {
+		display: grid;
+		gap: var(--space-1);
+		min-width: 0;
 	}
 
 	.calendar-month-name {
@@ -619,10 +694,37 @@
 
 	.calendar-day__mark {
 		position: absolute;
-		bottom: 0.45rem;
-		width: 0.3125rem;
-		height: 0.3125rem;
+		bottom: 0.4rem;
+		left: 50%;
+		transform: translateX(-50%);
+		width: 0.375rem;
+		height: 0.375rem;
 		border-radius: var(--radius-full);
 		background: var(--accent);
+	}
+
+	.calendar-day__check {
+		position: absolute;
+		bottom: 0.15rem;
+		left: 50%;
+		transform: translateX(-50%);
+		display: grid;
+		place-items: center;
+		font-size: 0.875rem;
+		line-height: 1;
+		pointer-events: none;
+	}
+
+	.calendar-day__check--complete {
+		color: var(--accent-leaf);
+	}
+
+	.calendar-day__check--partial {
+		color: var(--accent);
+	}
+
+	.calendar-day__check :global(svg.app-icon) {
+		width: 0.9375rem;
+		height: 0.9375rem;
 	}
 </style>

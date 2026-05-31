@@ -36,3 +36,11 @@ export function getReflectionStatus(entry: EventEntry): ReflectionStatus {
 
 	return 'partial';
 }
+
+export type ReflectStatusIcon = 'reflectEmpty' | 'reflectPartial' | 'reflectComplete';
+
+export function reflectStatusIcon(status: ReflectionStatus): ReflectStatusIcon {
+	if (status === 'complete') return 'reflectComplete';
+	if (status === 'partial') return 'reflectPartial';
+	return 'reflectEmpty';
+}

@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { AppButton, AppPopup, FieldLabel, IconButton } from '$lib/components/ui';
+	import { AppIcon } from '$lib/icons';
 	import { useI18n } from '$lib/i18n';
 	import { eventStore } from '$lib/state/events.svelte';
 	import { track } from '$lib/analytics';
 	import ArchivePopup from './ArchivePopup.svelte';
 	import LocaleSwitcher from './LocaleSwitcher.svelte';
 	import WeekStartSwitcher from './WeekStartSwitcher.svelte';
+	import ReflectionToneSwitcher from './ReflectionToneSwitcher.svelte';
 
 	const i18n = useI18n();
 	const entries = $derived(eventStore.entries);
@@ -35,11 +37,7 @@
 	onclick={() => (profileOpen = true)}
 >
 	{#snippet children()}
-		<svg viewBox="0 0 24 24" aria-hidden="true">
-			<path
-				d="M12 12a4.25 4.25 0 1 0 0-8.5 4.25 4.25 0 0 0 0 8.5Zm0 2c-3.9 0-7.1 2.2-7.1 5v1.5h14.2V19c0-2.8-3.2-5-7.1-5Z"
-			/>
-		</svg>
+		<AppIcon name="profile" />
 	{/snippet}
 </IconButton>
 
@@ -62,6 +60,13 @@
 				<span id="profile-week-start-heading">{i18n.t('weekStart.label')}</span>
 			</FieldLabel>
 			<WeekStartSwitcher labelledBy="profile-week-start-heading" />
+		</div>
+
+		<div class="locale-row">
+			<FieldLabel size="row">
+				<span id="profile-reflection-tone-heading">{i18n.t('reflectionTone.label')}</span>
+			</FieldLabel>
+			<ReflectionToneSwitcher labelledBy="profile-reflection-tone-heading" />
 		</div>
 
 		<AppButton variant="secondary" fullWidth onclick={openArchive}>

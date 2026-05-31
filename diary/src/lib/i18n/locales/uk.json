@@ -10,6 +10,9 @@
 		"event": "Що відбулося",
 		"placeholder": "Коротко зафіксуй подію...",
 		"resonance": "Резонанс події",
+		"kindLabel": "Тип запису",
+		"kindEvent": "Подія",
+		"kindAct": "Вчинок",
 		"save": "Зберегти",
 		"saveAndAnother": "Зберегти і додати ще один"
 	},
@@ -23,7 +26,22 @@
 		"selectMonth": "Місяць",
 		"selectYear": "Рік",
 		"today": "Сьогодні",
-		"dayEntries": "{day}: {count} записів"
+		"dayEntries": "{day}: {count} записів",
+		"dayReflectionNotStarted": "{day}: {count} записів, рефлексію дня не розпочато",
+		"dayReflectionPartial": "{day}: {count} записів, рефлексію дня розпочато",
+		"dayReflectionComplete": "{day}: {count} записів, рефлексію дня завершено"
+	},
+	"dayReflection": {
+		"positiveEvents": "Які події мене сьогодні радували",
+		"negativeEvents": "Які події мене сьогодні засмутили",
+		"positiveActs": "Як я себе сьогодні радував",
+		"negativeActs": "Які мої вчинки сьогодні мене засмутили",
+		"nextActions": "Як я буду діяти в цих ситуаціях наступного разу, щоб менше засмучуватись?",
+		"insights": "Відкриття / Інсайти / Спостереження",
+		"dayScore": "Резонанс дня",
+		"emptySection": "Нічого в записах за цей день",
+		"addEntry": "Додати запис",
+		"save": "Зберегти рефлексію дня"
 	},
 	"analysis": {
 		"title": "Розбір події",
@@ -65,5 +83,10 @@
 		"label": "Початок тижня",
 		"monday": "Пн",
 		"sunday": "Нд"
+	},
+	"reflectionTone": {
+		"label": "Стиль рефлексії",
+		"gentle": "Gentle",
+		"aggressive": "Aggressive"
 	}
 }

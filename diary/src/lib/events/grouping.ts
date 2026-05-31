@@ -12,6 +12,29 @@ export function localDateKey(iso: string): string {
 	return `${y}-${m}-${day}`;
 }
 
+export function formatDayLabel(dayKey: string, locale: Locale): string {
+	const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
+	if (!match) return dayKey;
+
+	const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+	return date.toLocaleDateString(dateLocale(locale), {
+		weekday: 'long',
+		day: 'numeric',
+		month: 'long'
+	});
+}
+
+export function entriesForDay(entries: EventEntry[], dayKey: string): EventEntry[] {
+	return entries.filter((entry) => localDateKey(entry.createdAt) === dayKey);
+}
+
+export function createdAtForDayKey(dayKey: string): string {
+	const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
+	if (!match) return new Date().toISOString();
+
+	return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 12, 0, 0, 0).toISOString();
+}
+
 export function groupEventEntries(entries: EventEntry[], locale: Locale): YearGroup[] {
 	const years: YearGroup[] = [];
 	const yearIndex = new Map<string, YearGroup>();

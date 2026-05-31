@@ -10,6 +10,9 @@
 		"event": "What happened",
 		"placeholder": "Capture the event briefly...",
 		"resonance": "Event resonance",
+		"kindLabel": "Entry type",
+		"kindEvent": "Event",
+		"kindAct": "Act",
 		"save": "Save",
 		"saveAndAnother": "Save and add another"
 	},
@@ -23,7 +26,22 @@
 		"selectMonth": "Month",
 		"selectYear": "Year",
 		"today": "Today",
-		"dayEntries": "{day}: {count} entries"
+		"dayEntries": "{day}: {count} entries",
+		"dayReflectionNotStarted": "{day}: {count} entries, day reflection not started",
+		"dayReflectionPartial": "{day}: {count} entries, day reflection in progress",
+		"dayReflectionComplete": "{day}: {count} entries, day reflection complete"
+	},
+	"dayReflection": {
+		"positiveEvents": "Events that delighted me today",
+		"negativeEvents": "Events that upset me today",
+		"positiveActs": "How I treated myself well today",
+		"negativeActs": "My actions that upset me today",
+		"nextActions": "How will I act next time in these situations to feel less upset?",
+		"insights": "Openings / Insights / Observations",
+		"dayScore": "Day resonance",
+		"emptySection": "Nothing in the log for this day",
+		"addEntry": "Add entry",
+		"save": "Save day reflection"
 	},
 	"analysis": {
 		"title": "Event reflection",
@@ -65,5 +83,10 @@
 		"label": "Week starts on",
 		"monday": "Mon",
 		"sunday": "Sun"
+	},
+	"reflectionTone": {
+		"label": "Reflection style",
+		"gentle": "Gentle",
+		"aggressive": "Aggressive"
 	}
 }

@@ -2,7 +2,10 @@
 	import { tick } from 'svelte';
 	import { AppFullscreen } from '$lib/components/ui';
 	import ScorePicker from '$lib/components/ScorePicker.svelte';
+	import EventKindSwitcher from '$lib/components/EventKindSwitcher.svelte';
+	import { AppIcon } from '$lib/icons';
 	import type { EventEntry } from '$lib/events/types';
+	import { DEFAULT_EVENT_KIND, type EventKind } from '$lib/events/types';
 	import { useI18n } from '$lib/i18n';
 	import { hapticLight } from '$lib/platform/native';
 	import { track } from '$lib/analytics';
@@ -10,12 +13,24 @@
 	interface Props {
 		open: boolean;
 		initialText?: string;
+		initialKind?: EventKind;
+		initialScore?: number;
+		initialCreatedAt?: string;
 		focusKey?: number;
 		onClose: () => void;
 		onSave: (entry: EventEntry) => Promise<void>;
 	}
 
-	let { open, initialText = '', focusKey = 0, onClose, onSave }: Props = $props();
+	let {
+		open,
+		initialText = '',
+		initialKind = DEFAULT_EVENT_KIND,
+		initialScore = 0,
+		initialCreatedAt,
+		focusKey = 0,
+		onClose,
+		onSave
+	}: Props = $props();
 
 	const i18n = useI18n();
 
@@ -23,11 +38,13 @@
 	const BUFFER_LINES = 1;
 
 	let eventText = $state('');
+	let eventKind = $state<EventKind>(DEFAULT_EVENT_KIND);
 	let score = $state(0);
 	let eventInput = $state<HTMLTextAreaElement | null>(null);
 	let eventInputWrap = $state<HTMLDivElement | null>(null);
 	let inputFocused = $state(false);
 	let saving = $state(false);
+	let createdAtOverride = $state<string | null>(null);
 
 	const canSave = $derived(eventText.trim().length > 0 && !saving);
 	const showInputDisplay = $derived(!inputFocused);
@@ -37,9 +54,16 @@
 		return scoreValue <= 0 ? 'negative' : 'positive';
 	}
 
-	function resetForm(text = ''): void {
+	function resetForm(
+		text = '',
+		kind: EventKind = DEFAULT_EVENT_KIND,
+		scoreValue = 0,
+		createdAt: string | null = null
+	): void {
 		eventText = text;
-		score = 0;
+		eventKind = kind;
+		score = scoreValue;
+		createdAtOverride = createdAt;
 		inputFocused = false;
 	}
 
@@ -101,18 +125,19 @@
 			id: crypto.randomUUID(),
 			text,
 			score,
-			createdAt: new Date().toISOString(),
+			kind: eventKind,
+			createdAt: createdAtOverride ?? new Date().toISOString(),
 			protocol: { event: text, reason: '', about: '', view: '', actions: '' }
 		};
 
 		saving = true;
 		try {
 			await onSave(entry);
-			track('event_saved', { score: entry.score, tone: tone(entry.score), andAnother });
+			track('event_saved', { score: entry.score, tone: tone(entry.score), kind: entry.kind, andAnother });
 			void hapticLight();
 
 			if (andAnother) {
-				resetForm();
+				resetForm('', eventKind, score, createdAtOverride);
 				await focusInput({ haptic: false });
 			} else {
 				onClose();
@@ -125,7 +150,12 @@
 	$effect(() => {
 		if (!open) return;
 		focusKey;
-		resetForm(initialText);
+		resetForm(
+			initialText,
+			initialKind,
+			initialScore,
+			initialCreatedAt ?? null
+		);
 		void tick().then(() => {
 			void focusInput({ haptic: false });
 			requestAnimationFrame(() => {
@@ -145,11 +175,7 @@
 </script>
 
 {#snippet editIcon()}
-	<svg class="inline-edit-icon" viewBox="0 0 24 24" aria-hidden="true">
-		<path
-			d="M4 17.5V20h2.5L17 9.5 14.5 7 4 17.5Zm14.7-8.8a1 1 0 0 0 0-1.4l-1-1a1 1 0 0 0-1.4 0l-1 1 2.4 2.4 1-1Z"
-		/>
-	</svg>
+	<AppIcon name="edit" class="inline-edit-icon" />
 {/snippet}
 
 {#snippet header()}
@@ -177,6 +203,8 @@
 			<div class="capture-gap" aria-hidden="true"></div>
 
 			<section class="capture-step" aria-labelledby="capture-event-title">
+				<EventKindSwitcher bind:value={eventKind} />
+
 				<div class="quiz-input-wrap" bind:this={eventInputWrap}>
 					{#if showInputDisplay}
 						<button
@@ -220,9 +248,7 @@
 						disabled={!canSave}
 						aria-label={i18n.t('capture.save')}
 					>
-						<svg viewBox="0 0 24 24" aria-hidden="true">
-							<path d="M9.55 17.05 4.5 12l1.4-1.42 3.65 3.65 8.55-8.55 1.4 1.42-9.95 9.97Z" />
-						</svg>
+						<AppIcon name="check" />
 					</button>
 
 					<button
@@ -232,9 +258,7 @@
 						aria-label={i18n.t('capture.saveAndAnother')}
 						onclick={() => persist(true)}
 					>
-						<svg viewBox="0 0 24 24" aria-hidden="true">
-							<path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
-						</svg>
+						<AppIcon name="add" />
 					</button>
 				</nav>
 			</section>
@@ -303,13 +327,16 @@
 		flex-direction: column;
 	}
 
-	.inline-edit-icon {
+	.capture-step :global(.kind-switcher) {
+		margin-bottom: var(--space-3);
+	}
+
+	:global(svg.inline-edit-icon) {
 		display: inline-block;
 		width: 1.25rem;
 		height: 1.25rem;
 		margin-inline-start: 0.25em;
 		vertical-align: -0.14em;
-		fill: currentColor;
 		color: var(--text);
 	}
 
@@ -363,7 +390,7 @@
 		word-break: break-word;
 	}
 
-	.quiz-input-placeholder .inline-edit-icon {
+	.quiz-input-placeholder :global(svg.inline-edit-icon) {
 		color: var(--text-soft);
 	}
 
@@ -403,11 +430,6 @@
 		box-shadow: none;
 	}
 
-	.capture-step {
-		display: flex;
-		flex-direction: column;
-	}
-
 	.capture-step :global(.score-picker-wrap) {
 		margin-top: var(--space-3);
 	}
@@ -439,10 +461,9 @@
 		-webkit-tap-highlight-color: transparent;
 	}
 
-	.quiz-arrow svg {
+	.quiz-arrow :global(svg.app-icon) {
 		width: var(--text-lg);
 		height: var(--text-lg);
-		fill: currentColor;
 	}
 
 	.quiz-arrow:hover:not(:disabled),

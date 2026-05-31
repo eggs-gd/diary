@@ -1,4 +1,5 @@
 import type { EventEntry } from '$lib/events/types';
+import { normalizeEventKind } from '$lib/events/event-kind';
 import { EVENTS_STORAGE_KEY, type EventRepository } from './event-repository';
 
 function isEventEntry(value: unknown): value is EventEntry {
@@ -9,8 +10,13 @@ function isEventEntry(value: unknown): value is EventEntry {
 		typeof entry.text === 'string' &&
 		typeof entry.score === 'number' &&
 		typeof entry.createdAt === 'string' &&
+		(entry.kind === undefined || entry.kind === 'event' || entry.kind === 'act') &&
 		(entry.protocol === undefined || typeof entry.protocol === 'object')
 	);
+}
+
+function withNormalizedKind(entry: EventEntry): EventEntry {
+	return { ...entry, kind: normalizeEventKind(entry.kind) };
 }
 
 export class LocalEventRepository implements EventRepository {
@@ -25,7 +31,7 @@ export class LocalEventRepository implements EventRepository {
 			const raw = localStorage.getItem(EVENTS_STORAGE_KEY);
 			if (!raw) return [];
 			const parsed = JSON.parse(raw) as unknown;
-			return Array.isArray(parsed) ? parsed.filter(isEventEntry) : [];
+			return Array.isArray(parsed) ? parsed.filter(isEventEntry).map(withNormalizedKind) : [];
 		} catch {
 			return [];
 		}
