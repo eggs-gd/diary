@@ -310,9 +310,7 @@
 
 				<section class="quiz-step" class:quiz-step--resonance={isResonanceStep} aria-live="polite">
 					<h2 class="quiz-question">
-						{isResonanceStep
-							? i18n.t('analysis.resonanceQuestion')
-							: reflectionLabel(currentField)}
+						{isResonanceStep ? i18n.t('analysis.resonanceQuestion') : reflectionLabel(currentField)}
 					</h2>
 
 					{#if isResonanceStep}
@@ -322,7 +320,9 @@
 									class="rf-score-value"
 									class:positive={reflectionScore > 0}
 									class:negative={reflectionScore <= 0}
-								>{scoreLabel(reflectionScore)}</p>
+								>
+									{scoreLabel(reflectionScore)}
+								</p>
 							</div>
 							<input
 								type="range"
@@ -395,9 +395,7 @@
 								onclick={() => void completeReflection()}
 							>
 								<svg viewBox="0 0 24 24" aria-hidden="true">
-									<path
-										d="M9.55 17.05 4.5 12l1.4-1.42 3.65 3.65 8.55-8.55 1.4 1.42-9.95 9.97Z"
-									/>
+									<path d="M9.55 17.05 4.5 12l1.4-1.42 3.65 3.65 8.55-8.55 1.4 1.42-9.95 9.97Z" />
 								</svg>
 							</button>
 						{:else}

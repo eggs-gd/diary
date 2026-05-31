@@ -20,7 +20,13 @@
 	</div>
 {/snippet}
 
-<AppFullscreen {open} labelledBy="reflection-day-title" closeLabel={i18n.t('common.close')} {onClose} {header}>
+<AppFullscreen
+	{open}
+	labelledBy="reflection-day-title"
+	closeLabel={i18n.t('common.close')}
+	{onClose}
+	{header}
+>
 	{#snippet children()}
 		<p class="day-stub">{i18n.t('archive.empty')}</p>
 	{/snippet}

@@ -1,6 +1,10 @@
 <script lang="ts">
 	import { useI18n } from '$lib/i18n';
-	import { resolveWeekStart, WEEK_START_OPTIONS, type WeekStart } from '$lib/preferences/week-start';
+	import {
+		resolveWeekStart,
+		WEEK_START_OPTIONS,
+		type WeekStart
+	} from '$lib/preferences/week-start';
 	import { useWeekStart } from '$lib/preferences/week-start.svelte';
 	import { track } from '$lib/analytics';
 

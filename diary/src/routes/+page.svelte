@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { AppButton } from '$lib/components/ui';
+	import CaptureEvent from '$lib/components/CaptureEvent.svelte';
 	import ReflectionEvent from '$lib/components/ReflectionEvent.svelte';
 	import ArchiveCalendar from '$lib/components/ArchiveCalendar.svelte';
 	import ScoreDots from '$lib/components/ScoreDots.svelte';
@@ -9,44 +9,31 @@
 	import type { EventEntry } from '$lib/events/types';
 	import { useI18n } from '$lib/i18n';
 	import { hapticLight } from '$lib/platform/native';
+	import { initShareIntent } from '$lib/platform/share-intent';
 	import { eventStore } from '$lib/state/events.svelte';
 	import { track, trackVisible } from '$lib/analytics';
 
 	const i18n = useI18n();
 
-	// Capture form state
-	let eventText = $state('');
-	let score = $state(0);
-	let eventInput = $state<HTMLTextAreaElement | null>(null);
-	const rangeFill = $derived(getRangeFill(score));
-
-	// Archive
 	const groupedEntries = $derived(groupEventEntries(eventStore.entries, i18n.locale));
 
-	// Reflection state
+	let captureOpen = $state(false);
+	let captureInitialText = $state('');
+	let captureFocusKey = $state(0);
 	let selectedEntry = $state<EventEntry | null>(null);
 	let calendarOpen = $state(false);
 
 	onMount(() => {
 		void eventStore.load();
+		let teardownShareIntent: (() => void) | null = null;
+		void initShareIntent((text) => {
+			openCapture(text);
+			track('share_text_received');
+		}).then((teardown) => {
+			teardownShareIntent = teardown;
+		});
+		return () => teardownShareIntent?.();
 	});
-
-	function getRangeFill(value: number): string {
-		const marker = ((value + 10) / 20) * 100;
-		return `linear-gradient(90deg,
-			color-mix(in srgb, var(--accent-rose) 58%, transparent) 0%,
-			color-mix(in srgb, var(--accent) 42%, transparent) 50%,
-			color-mix(in srgb, var(--accent-leaf) 58%, transparent) 100%),
-			linear-gradient(90deg, transparent ${marker}%, color-mix(in srgb, var(--bg) 56%, transparent) ${marker}%)`;
-	}
-
-	function scoreLabel(value: number): string {
-		return value > 0 ? `+${value}` : String(value);
-	}
-
-	function tone(scoreValue: number): 'negative' | 'positive' {
-		return scoreValue <= 0 ? 'negative' : 'positive';
-	}
 
 	function reflectActionLabel(status: ReflectionStatus): string {
 		const map: Record<ReflectionStatus, string> = {
@@ -57,26 +44,16 @@
 		return map[status];
 	}
 
-	async function submitEvent(): Promise<void> {
-		const text = eventText.trim();
-		if (!text) {
-			eventInput?.focus();
-			return;
-		}
-
-		const entry: EventEntry = {
-			id: crypto.randomUUID(),
-			text,
-			score,
-			createdAt: new Date().toISOString(),
-			protocol: { event: text, reason: '', about: '', view: '', actions: '' }
-		};
-
-		await eventStore.add(entry);
-		eventText = '';
-		score = 0;
-		track('event_saved', { score: entry.score, tone: tone(entry.score) });
+	function openCapture(text = ''): void {
+		captureInitialText = text;
+		captureFocusKey += 1;
+		captureOpen = true;
+		track('capture_opened');
 		void hapticLight();
+	}
+
+	async function handleCaptureSave(entry: EventEntry): Promise<void> {
+		await eventStore.add(entry);
 	}
 
 	function openAnalysis(entry: EventEntry): void {
@@ -105,60 +82,35 @@
 <main class="main">
 	<header class="site-header" use:trackVisible={{ event: 'home_header_viewed' }}>
 		<h1 class="logo">觀明</h1>
-		<p class="tagline">{i18n.t('app.tagline')}</p>
 	</header>
-
-	<form class="capture" onsubmit={(event) => (event.preventDefault(), void submitEvent())}>
-		<label class="field-label" for="event-text">{i18n.t('capture.event')}</label>
-		<textarea
-			id="event-text"
-			bind:this={eventInput}
-			bind:value={eventText}
-			placeholder={i18n.t('capture.placeholder')}
-			rows="3"
-		></textarea>
-
-		<div class="scale-head">
-			<label class="field-label" for="event-score">{i18n.t('capture.resonance')}</label>
-			<p class="score-value" class:positive={score > 0} class:negative={score <= 0}>
-				{scoreLabel(score)}
-			</p>
-		</div>
-		<input
-			id="event-score"
-			type="range"
-			min="-10"
-			max="10"
-			step="1"
-			bind:value={score}
-			style:--range-fill={rangeFill}
-		/>
-		<div class="scale-labels" aria-hidden="true">
-			<span>-10</span>
-			<span>0</span>
-			<span>+10</span>
-		</div>
-
-		<AppButton variant="primary" fullWidth type="submit" disabled={!eventText.trim()}>
-			{#snippet children()}{i18n.t('capture.save')}{/snippet}
-		</AppButton>
-	</form>
 
 	<section class="archive" use:trackVisible={{ event: 'archive_viewed' }}>
 		<div class="archive-head">
 			<h2 class="archive-title">{i18n.t('archive.title')}</h2>
-			<button
-				type="button"
-				class="archive-calendar-btn"
-				aria-label={i18n.t('archive.openCalendar')}
-				onclick={openCalendar}
-			>
-				<svg viewBox="0 0 24 24" aria-hidden="true">
-					<path
-						d="M19 4h-1V2h-2v2H8V2H6v2H5a1.99 1.99 0 0 0-1.99 1.99V20A1.99 1.99 0 0 0 5 22h14c1.1 0 2-.9 2-2V6c0-1.2-.9-2-2-2Zm0 16H5V10h14v10ZM7 12h2v2H7v-2Zm4 0h2v2h-2v-2Zm4 0h2v2h-2v-2Zm-8 4h2v2H7v-2Zm4 0h2v2h-2v-2Zm4 0h2v2h-2v-2Z"
-					/>
-				</svg>
-			</button>
+			<div class="archive-actions">
+				<button
+					type="button"
+					class="archive-icon-btn"
+					aria-label={i18n.t('capture.newEvent')}
+					onclick={() => openCapture()}
+				>
+					<svg viewBox="0 0 24 24" aria-hidden="true">
+						<path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+					</svg>
+				</button>
+				<button
+					type="button"
+					class="archive-icon-btn"
+					aria-label={i18n.t('archive.openCalendar')}
+					onclick={openCalendar}
+				>
+					<svg viewBox="0 0 24 24" aria-hidden="true">
+						<path
+							d="M19 4h-1V2h-2v2H8V2H6v2H5a1.99 1.99 0 0 0-1.99 1.99V20A1.99 1.99 0 0 0 5 22h14c1.1 0 2-.9 2-2V6c0-1.2-.9-2-2-2Zm0 16H5V10h14v10ZM7 12h2v2H7v-2Zm4 0h2v2h-2v-2Zm4 0h2v2h-2v-2Zm-8 4h2v2H7v-2Zm4 0h2v2h-2v-2Zm4 0h2v2h-2v-2Z"
+						/>
+					</svg>
+				</button>
+			</div>
 		</div>
 
 		{#if eventStore.entries.length === 0}
@@ -181,10 +133,7 @@
 													<article class="entry">
 														<div class="entry-head">
 															<p class="entry-text">{entry.text}</p>
-															<time
-																class="entry-time"
-																datetime={entry.createdAt}
-															>
+															<time class="entry-time" datetime={entry.createdAt}>
 																{new Date(entry.createdAt).toLocaleTimeString(
 																	i18n.locale === 'uk' ? 'uk-UA' : 'en-US',
 																	{ hour: '2-digit', minute: '2-digit' }
@@ -235,6 +184,14 @@
 	</section>
 </main>
 
+<CaptureEvent
+	open={captureOpen}
+	initialText={captureInitialText}
+	focusKey={captureFocusKey}
+	onClose={() => (captureOpen = false)}
+	onSave={handleCaptureSave}
+/>
+
 <ArchiveCalendar
 	open={calendarOpen}
 	entries={eventStore.entries}
@@ -274,62 +231,13 @@
 
 	.site-header {
 		text-align: center;
-		margin-bottom: var(--space-7);
+		margin-bottom: var(--space-5);
 	}
 
 	.logo {
 		font-size: var(--text-hero);
 		color: var(--accent);
 		letter-spacing: var(--tracking-hero);
-	}
-
-	.tagline,
-	.field-label {
-		font-size: var(--text-sm);
-		text-transform: uppercase;
-		letter-spacing: var(--tracking-hero);
-		color: var(--text-faint);
-	}
-
-	.capture {
-		display: grid;
-		gap: var(--space-3);
-		margin-bottom: var(--space-7);
-		padding-bottom: var(--space-6);
-		border-bottom: 1px solid var(--border);
-	}
-
-	.capture textarea {
-		min-height: 7rem;
-	}
-
-	.scale-head,
-	.scale-labels {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: var(--space-3);
-	}
-
-	.score-value {
-		font-family: var(--font-serif);
-		font-size: var(--text-xl);
-		line-height: 1;
-	}
-
-	.score-value.positive {
-		color: var(--accent-leaf);
-	}
-
-	.score-value.negative {
-		color: var(--accent-rose);
-	}
-
-	.scale-labels {
-		margin-top: calc(-1 * var(--space-2));
-		color: var(--text-faint);
-		font-size: var(--text-xs);
-		letter-spacing: var(--tracking-caps);
 	}
 
 	.archive {
@@ -341,7 +249,7 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: var(--space-3);
-		margin-bottom: var(--space-3);
+		margin-bottom: var(--space-5);
 	}
 
 	.archive-title {
@@ -353,7 +261,14 @@
 		color: var(--text-muted);
 	}
 
-	.archive-calendar-btn {
+	.archive-actions {
+		display: flex;
+		align-items: center;
+		gap: var(--space-3);
+		flex-shrink: 0;
+	}
+
+	.archive-icon-btn {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
@@ -366,14 +281,14 @@
 		-webkit-tap-highlight-color: transparent;
 	}
 
-	.archive-calendar-btn svg {
+	.archive-icon-btn svg {
 		width: 1.25rem;
 		height: 1.25rem;
 		fill: currentColor;
 	}
 
-	.archive-calendar-btn:hover,
-	.archive-calendar-btn:focus-visible {
+	.archive-icon-btn:hover,
+	.archive-icon-btn:focus-visible {
 		color: var(--text-soft);
 		outline: none;
 	}

@@ -116,7 +116,10 @@ export function compareMonths(a: CalendarMonth, b: CalendarMonth): number {
 	return a.year !== b.year ? a.year - b.year : a.month - b.month;
 }
 
-export function calendarMonthBounds(entryDates: string[]): { start: CalendarMonth; end: CalendarMonth } {
+export function calendarMonthBounds(entryDates: string[]): {
+	start: CalendarMonth;
+	end: CalendarMonth;
+} {
 	const { min, max } = calendarYearBounds(entryDates);
 	return {
 		start: { year: min, month: 0 },

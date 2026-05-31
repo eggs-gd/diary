@@ -40,9 +40,7 @@
 	const i18n = useI18n();
 	const weekStart = useWeekStart();
 	const weekStartPreference = $derived.by(() => weekStart.preference);
-	const resolvedWeekStart = $derived.by(() =>
-		resolveWeekStart(weekStartPreference, i18n.locale)
-	);
+	const resolvedWeekStart = $derived.by(() => resolveWeekStart(weekStartPreference, i18n.locale));
 
 	const entryDates = $derived(entries.map((entry) => entry.createdAt));
 	const countsByDay = $derived(entryCountsByDay(entryDates));
@@ -269,6 +267,10 @@
 
 {#snippet header()}
 	<div class="calendar-head">
+		<button type="button" class="calendar-back" onclick={onClose}>
+			{i18n.t('analysis.back')}
+		</button>
+
 		<h1 id="archive-calendar-title" class="calendar-title-sr">{i18n.t('archive.openCalendar')}</h1>
 
 		<div class="calendar-head-row">
@@ -303,7 +305,7 @@
 	</div>
 {/snippet}
 
-<AppFullscreen {open} labelledBy="archive-calendar-title" {onClose} {header}>
+<AppFullscreen {open} labelledBy="archive-calendar-title" showClose={false} {onClose} {header}>
 	{#snippet children()}
 		<div class="calendar" bind:this={calendarRoot}>
 			<div class="calendar-weekdays" aria-hidden="true">
@@ -364,9 +366,34 @@
 
 <style>
 	.calendar-head {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-2);
 		width: 100%;
 		max-width: var(--content-max-width);
 		margin: 0 auto;
+	}
+
+	.calendar-back {
+		align-self: flex-start;
+		margin: 0;
+		padding: 0;
+		border: none;
+		background: transparent;
+		font-family: var(--font-sans);
+		font-size: var(--text-sm);
+		font-weight: 400;
+		line-height: var(--leading-normal);
+		color: var(--text-muted);
+		cursor: pointer;
+		transition: color var(--transition-interactive);
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	.calendar-back:hover,
+	.calendar-back:focus-visible {
+		color: var(--text-soft);
+		outline: none;
 	}
 
 	.calendar-title-sr {

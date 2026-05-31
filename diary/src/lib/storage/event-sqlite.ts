@@ -28,6 +28,10 @@ type EventRow = {
 	protocol_json: string | null;
 };
 
+type TableInfoRow = {
+	name?: string;
+};
+
 let db: SQLiteDBConnection | null = null;
 
 function rowToEvent(row: EventRow): EventEntry {
@@ -41,10 +45,12 @@ function rowToEvent(row: EventRow): EventEntry {
 }
 
 async function ensureSchema(database: SQLiteDBConnection): Promise<void> {
-	try {
+	const result = await database.query(`PRAGMA table_info(events)`);
+	const rows = (result.values ?? []) as TableInfoRow[];
+	const hasProtocolJson = rows.some((row) => row.name === 'protocol_json');
+
+	if (!hasProtocolJson) {
 		await database.execute(`ALTER TABLE events ADD COLUMN protocol_json TEXT`);
-	} catch {
-		// Column already exists.
 	}
 }
 

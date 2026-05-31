@@ -6,13 +6,15 @@
 		"tagline": "attention archive"
 	},
 	"capture": {
+		"newEvent": "New event",
 		"event": "What happened",
 		"placeholder": "Capture the event briefly...",
 		"resonance": "Event resonance",
-		"save": "Save"
+		"save": "Save",
+		"saveAndAnother": "Save and add another"
 	},
 	"archive": {
-		"title": "Archive",
+		"title": "Attention archive",
 		"empty": "Quiet for now. Your first events will appear after saving.",
 		"reflectEmpty": "Start reflection",
 		"reflectPartial": "Continue reflection",
