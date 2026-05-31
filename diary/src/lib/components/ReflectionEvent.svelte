@@ -173,7 +173,6 @@
 		if (!updated || saving) return;
 		saving = true;
 		try {
-			await onPersist(updated);
 			await onComplete(updated);
 			editingEvent = false;
 		} finally {

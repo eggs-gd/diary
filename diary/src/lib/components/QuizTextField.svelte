@@ -27,6 +27,7 @@
 
 	let textarea = $state<HTMLTextAreaElement | null>(null);
 	let wrap = $state<HTMLDivElement | null>(null);
+	let resizeFrame: number | null = null;
 
 	const showDisplay = $derived(!focused);
 	const isEmpty = $derived(!value.trim());
@@ -36,21 +37,34 @@
 		resizeQuizTextarea(textarea, wrap, { minLines, bufferLines });
 	}
 
+	function queueResize(): void {
+		if (resizeFrame !== null) return;
+		resizeFrame = requestAnimationFrame(() => {
+			resizeFrame = null;
+			resize();
+		});
+	}
+
 	$effect(() => {
 		if (!focused) return;
 		requestAnimationFrame(() => {
 			textarea?.focus({ preventScroll: true });
-			resize();
+			queueResize();
 		});
 	});
 
 	$effect(() => {
 		// Track reactive dependencies for resize
 		value;
-		showDisplay;
-		isEmpty;
+		focused;
 		resizeTrigger;
-		void tick().then(resize);
+		void tick().then(queueResize);
+	});
+
+	$effect(() => {
+		return () => {
+			if (resizeFrame !== null) cancelAnimationFrame(resizeFrame);
+		};
 	});
 </script>
 
@@ -80,7 +94,7 @@
 		aria-label={ariaLabel}
 		onfocus={() => (focused = true)}
 		onblur={() => (focused = false)}
-		oninput={resize}
+		oninput={queueResize}
 	></textarea>
 </div>
 

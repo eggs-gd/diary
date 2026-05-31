@@ -80,6 +80,7 @@
 	let headerMonth = $state(new Date().getMonth());
 	let syncingFromScroll = $state(false);
 	let wasOpen = $state(false);
+	let scrollSyncFrame: number | null = null;
 
 	const monthKeys = $derived(iterMonthKeys(rangeStart, rangeEnd));
 
@@ -201,6 +202,14 @@
 		headerMonth = parsed.month;
 	}
 
+	function queueHeaderSyncFromScroll(): void {
+		if (scrollSyncFrame !== null) return;
+		scrollSyncFrame = requestAnimationFrame(() => {
+			scrollSyncFrame = null;
+			syncHeaderFromScroll();
+		});
+	}
+
 	async function jumpToHeaderMonth(): Promise<void> {
 		syncingFromScroll = true;
 		ensureMonthInRange(headerYear, headerMonth);
@@ -285,9 +294,15 @@
 		const scrollContainer = getScrollContainer();
 		if (!scrollContainer) return;
 
-		const handleScroll = () => syncHeaderFromScroll();
+		const handleScroll = () => queueHeaderSyncFromScroll();
 		scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
-		return () => scrollContainer.removeEventListener('scroll', handleScroll);
+		return () => {
+			scrollContainer.removeEventListener('scroll', handleScroll);
+			if (scrollSyncFrame !== null) {
+				cancelAnimationFrame(scrollSyncFrame);
+				scrollSyncFrame = null;
+			}
+		};
 	});
 
 	$effect(() => {

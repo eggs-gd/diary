@@ -12,18 +12,10 @@
 	import { AppButton, AppFullscreen, AppPopup } from '$lib/components/ui';
 	import { AppIcon } from '$lib/icons';
 	import { entriesForDay, formatDayLabel, groupEventEntries, createdAtForDayKey } from '$lib/events/grouping';
-	import {
-		flattenMonthEntries,
-		flattenYearEntries,
-		medianEventScore
-	} from '$lib/events/period-score';
 	import { normalizeEventKind, type EventKind } from '$lib/events/types';
 	import { getReflectionStatus } from '$lib/events/reflection-status';
-	import { dayReflectionDisplayIcon } from '$lib/events/reflection-display';
-	import {
-		getDayReflectionCalendarState,
-		type DayReflectionCalendarState
-	} from '$lib/events/day-reflection';
+	import { buildArchiveView } from '$lib/events/archive-view';
+	import type { DayReflectionCalendarState } from '$lib/events/day-reflection';
 	import type { EventEntry } from '$lib/events/types';
 	import { useI18n, getLocaleDateFormat } from '$lib/i18n';
 	import { reflectActionLabel } from '$lib/events/format';
@@ -42,6 +34,14 @@
 	const weekStart = useWeekStart();
 
 	const groupedEntries = $derived(groupEventEntries(eventStore.entries, i18n.locale));
+	const archiveView = $derived(
+		buildArchiveView(
+			eventStore.entries,
+			i18n.locale,
+			dayReflectionStore.byDayKey,
+			reflectionTone.preference
+		)
+	);
 
 	let captureOpen = $state(false);
 	let captureInitialText = $state('');
@@ -86,9 +86,11 @@
 	});
 
 
-	function dayReflectionActionLabel(dayKey: string, state: DayReflectionCalendarState): string {
-		const dayLabel = formatDayLabel(dayKey, i18n.locale);
-		const count = entriesForDay(eventStore.entries, dayKey).length;
+	function dayReflectionActionLabel(
+		dayLabel: string,
+		count: number,
+		state: DayReflectionCalendarState
+	): string {
 		const map: Record<DayReflectionCalendarState, string> = {
 			not_started: i18n.t('archive.dayReflectionNotStarted', { day: dayLabel, count }),
 			partial: i18n.t('archive.dayReflectionPartial', { day: dayLabel, count }),
@@ -331,49 +333,41 @@
 			<p class="empty">{i18n.t('archive.empty')}</p>
 		{:else}
 			<div class="entries-grouped">
-				{#each groupedEntries as year (year.key)}
-					{@const yearEntries = flattenYearEntries(year)}
-					{@const yearScore = medianEventScore(yearEntries)}
+				{#each archiveView as year (year.key)}
 					<section class="group-year" aria-labelledby="journal-year-{year.key}">
 						<div class="group-year-head">
 							<h3 class="group-year-label" id="journal-year-{year.key}">{year.label}</h3>
-							{#if yearScore !== null}
-								<ScoreDots compact original={yearScore} />
+							{#if year.score !== null}
+								<ScoreDots compact original={year.score} />
 							{/if}
 						</div>
 						{#each year.months as month (month.key)}
-							{@const monthEntries = flattenMonthEntries(month)}
-							{@const monthScore = medianEventScore(monthEntries)}
 							<section class="group-month" aria-labelledby="journal-month-{month.key}">
 								<div class="group-month-head">
 									<h4 class="group-month-label" id="journal-month-{month.key}">{month.label}</h4>
-									{#if monthScore !== null}
-										<ScoreDots compact original={monthScore} />
+									{#if month.score !== null}
+										<ScoreDots compact original={month.score} />
 									{/if}
 								</div>
 								{#each month.days as day (day.key)}
-									{@const dayScore = medianEventScore(day.entries)}
-									{@const dayReflectionState = getDayReflectionCalendarState(
-										dayReflectionStore.get(day.key)
-									)}
-									{@const dayDisplayIcon = dayReflectionDisplayIcon(
-										reflectionTone.preference,
-										dayReflectionState
-									)}
 									<section class="group-day" aria-labelledby="journal-day-{day.key}">
 										<button
 											type="button"
 											class="day-head-card"
-											aria-label={dayReflectionActionLabel(day.key, dayReflectionState)}
+											aria-label={dayReflectionActionLabel(
+												day.label,
+												day.entries.length,
+												day.reflectionState
+											)}
 											onclick={() => openDayReflection(day.key)}
 										>
 											<h5 class="group-day-label" id="journal-day-{day.key}">{day.label}</h5>
 											<div class="group-day-actions">
-												{#if dayScore !== null}
-													<ScoreDots compact original={dayScore} />
+												{#if day.score !== null}
+													<ScoreDots compact original={day.score} />
 												{/if}
-												{#if dayDisplayIcon}
-													<ReflectStatusIcon name={dayDisplayIcon} />
+												{#if day.reflectionIcon}
+													<ReflectStatusIcon name={day.reflectionIcon} />
 												{/if}
 											</div>
 										</button>

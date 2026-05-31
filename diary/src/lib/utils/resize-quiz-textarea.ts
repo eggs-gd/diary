@@ -4,6 +4,18 @@ export interface ResizeQuizTextareaOptions {
 	hiddenClass?: string;
 }
 
+const lineHeights = new WeakMap<HTMLTextAreaElement, number>();
+
+function getLineHeight(el: HTMLTextAreaElement): number {
+	const cached = lineHeights.get(el);
+	if (cached !== undefined) return cached;
+
+	const lineHeight = parseFloat(getComputedStyle(el).lineHeight);
+	const resolved = Number.isFinite(lineHeight) && lineHeight > 0 ? lineHeight : 24;
+	lineHeights.set(el, resolved);
+	return resolved;
+}
+
 /** Auto-height for quiz fields: min 2 lines, or content + 1 buffer line. */
 export function resizeQuizTextarea(
 	el: HTMLTextAreaElement,
@@ -22,9 +34,7 @@ export function resizeQuizTextarea(
 
 	el.style.height = '0';
 
-	const lineHeight = parseFloat(getComputedStyle(el).lineHeight);
-	if (!Number.isFinite(lineHeight) || lineHeight <= 0) return;
-
+	const lineHeight = getLineHeight(el);
 	const contentLines = Math.max(1, Math.ceil(el.scrollHeight / lineHeight));
 	const totalLines = Math.max(minLines, contentLines + bufferLines);
 	const height = `${totalLines * lineHeight}px`;

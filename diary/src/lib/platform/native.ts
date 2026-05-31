@@ -2,7 +2,6 @@ import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { StatusBar, Style } from '@capacitor/status-bar';
-import { ensureEventsReady } from '$lib/storage';
 import { applySystemTextZoom, initSystemTextZoom, teardownSystemTextZoom } from './text-scale';
 
 let appBackListener: { remove: () => void } | null = null;
@@ -31,7 +30,6 @@ export async function initNativePlatform(onAppBack?: () => void): Promise<void> 
 	}
 
 	await initSystemTextZoom();
-	await ensureEventsReady();
 
 	try {
 		await StatusBar.setStyle({ style: Style.Dark });

@@ -17,8 +17,13 @@ CREATE TABLE IF NOT EXISTS events (
 	created_at TEXT NOT NULL,
 	event_text TEXT NOT NULL,
 	resonance INTEGER NOT NULL,
+	kind TEXT NOT NULL DEFAULT 'event',
 	protocol_json TEXT
 );
+`;
+
+const CREATE_EVENTS_CREATED_AT_INDEX = `
+CREATE INDEX IF NOT EXISTS idx_events_created_at ON events(created_at DESC);
 `;
 
 const CREATE_DAY_REFLECTIONS_TABLE = `
@@ -48,6 +53,16 @@ type TableInfoRow = {
 };
 
 let db: SQLiteDBConnection | null = null;
+let dbPromise: Promise<SQLiteDBConnection> | null = null;
+
+function safeParseProtocol(value: string | null): EventEntry['protocol'] {
+	if (!value) return undefined;
+	try {
+		return JSON.parse(value) as EventEntry['protocol'];
+	} catch {
+		return undefined;
+	}
+}
 
 function rowToEvent(row: EventRow): EventEntry {
 	return {
@@ -56,7 +71,7 @@ function rowToEvent(row: EventRow): EventEntry {
 		text: row.event_text,
 		score: row.resonance,
 		kind: normalizeEventKind(row.kind),
-		protocol: row.protocol_json ? JSON.parse(row.protocol_json) : undefined
+		protocol: safeParseProtocol(row.protocol_json)
 	};
 }
 
@@ -74,6 +89,7 @@ async function ensureSchema(database: SQLiteDBConnection): Promise<void> {
 		await database.execute(`ALTER TABLE events ADD COLUMN kind TEXT NOT NULL DEFAULT 'event'`);
 	}
 
+	await database.execute(CREATE_EVENTS_CREATED_AT_INDEX);
 	await database.execute(CREATE_DAY_REFLECTIONS_TABLE);
 
 	const reflectionInfo = await database.query(`PRAGMA table_info(day_reflections)`);
@@ -104,13 +120,25 @@ export async function getAppDatabase(): Promise<SQLiteDBConnection> {
 
 async function getDatabase(): Promise<SQLiteDBConnection> {
 	if (db) return db;
+	if (dbPromise) return dbPromise;
 
-	const connection = new SQLiteConnection(CapacitorSQLite);
-	db = await connection.createConnection(DB_NAME, false, 'no-encryption', 1, false);
-	await db.open();
-	await db.execute(CREATE_EVENTS_TABLE);
-	await ensureSchema(db);
-	return db;
+	dbPromise = (async () => {
+		const connection = new SQLiteConnection(CapacitorSQLite);
+		const database = await connection.createConnection(DB_NAME, false, 'no-encryption', 1, false);
+		await database.open();
+		await database.execute(CREATE_EVENTS_TABLE);
+		await ensureSchema(database);
+		db = database;
+		return database;
+	})();
+
+	try {
+		return await dbPromise;
+	} catch (error) {
+		dbPromise = null;
+		db = null;
+		throw error;
+	}
 }
 
 async function insertEvent(database: SQLiteDBConnection, entry: EventEntry): Promise<void> {
@@ -146,9 +174,16 @@ async function migrateFromLocalStorage(database: SQLiteDBConnection): Promise<vo
 }
 
 export class SqliteEventRepository implements EventRepository {
+	private readyPromise: Promise<void> | null = null;
+
 	async ensureReady(): Promise<void> {
-		const database = await getDatabase();
-		await migrateFromLocalStorage(database);
+		if (!this.readyPromise) {
+			this.readyPromise = (async () => {
+				const database = await getDatabase();
+				await migrateFromLocalStorage(database);
+			})();
+		}
+		return this.readyPromise;
 	}
 
 	async loadAll(): Promise<EventEntry[]> {

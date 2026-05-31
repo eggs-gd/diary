@@ -8,7 +8,6 @@
 	import { initI18n, useI18n } from '$lib/i18n';
 	import { initWeekStart, initReflectionTone } from '$lib/preferences';
 	import { initNativePlatform, teardownNativePlatform } from '$lib/platform/native';
-	import { applySystemTextZoom } from '$lib/platform/text-scale';
 
 	let { children } = $props();
 
@@ -19,7 +18,6 @@
 
 	onMount(() => {
 		track('app_open');
-		void applySystemTextZoom();
 		void initNativePlatform(() => {
 			if (typeof history !== 'undefined' && history.length > 1) {
 				history.back();

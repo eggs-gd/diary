@@ -132,20 +132,6 @@
 		insightsFocused = false;
 	});
 
-	// Mark nextActions as edited when value changes while focused
-	$effect(() => {
-		if (!open || !nextActionsFocused) return;
-		nextActions;
-		markNextActionsEdited();
-	});
-
-	// Mark insights as edited when value changes while focused
-	$effect(() => {
-		if (!open || !insightsFocused) return;
-		insights;
-		markInsightsEdited();
-	});
-
 	// Mark edited when focus leaves the field (blur detection via focused state)
 	$effect(() => {
 		if (!open) return;

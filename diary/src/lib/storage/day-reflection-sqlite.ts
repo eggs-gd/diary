@@ -72,9 +72,16 @@ async function migrateFromLocalStorage(
 }
 
 export class SqliteDayReflectionRepository implements DayReflectionRepository {
+	private readyPromise: Promise<void> | null = null;
+
 	async ensureReady(): Promise<void> {
-		const database = await getAppDatabase();
-		await migrateFromLocalStorage(database);
+		if (!this.readyPromise) {
+			this.readyPromise = (async () => {
+				const database = await getAppDatabase();
+				await migrateFromLocalStorage(database);
+			})();
+		}
+		return this.readyPromise;
 	}
 
 	async loadAll(): Promise<DayReflection[]> {
