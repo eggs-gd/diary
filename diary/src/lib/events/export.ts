@@ -2,6 +2,8 @@ import type { DayReflection, EventEntry, Locale, ReflectionProtocol, YearGroup }
 import { getLocaleDateFormat } from '$lib/i18n';
 
 type Translator = (key: string, params?: Record<string, string | number>) => string;
+export type ExportRange = 'today' | 'week' | 'month';
+export type ExportMode = 'report' | 'agent';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -214,4 +216,49 @@ export function archiveFilename(): string {
 	const d = new Date();
 	const pad = (n: number) => String(n).padStart(2, '0');
 	return `guanming-${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}.md`;
+}
+
+function startOfToday(): Date {
+	const now = new Date();
+	return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
+function addDays(date: Date, days: number): Date {
+	const next = new Date(date);
+	next.setDate(next.getDate() + days);
+	return next;
+}
+
+export function exportBounds(
+	range: ExportRange,
+	firstDayOfWeek: 0 | 1
+): { start: Date; end: Date } {
+	const today = startOfToday();
+
+	if (range === 'today') {
+		return { start: today, end: addDays(today, 1) };
+	}
+
+	if (range === 'month') {
+		return {
+			start: new Date(today.getFullYear(), today.getMonth(), 1),
+			end: new Date(today.getFullYear(), today.getMonth() + 1, 1)
+		};
+	}
+
+	const offset = (today.getDay() - firstDayOfWeek + 7) % 7;
+	const start = addDays(today, -offset);
+	return { start, end: addDays(start, 7) };
+}
+
+export function filterEntriesByRange(
+	entries: EventEntry[],
+	range: ExportRange,
+	firstDayOfWeek: 0 | 1
+): EventEntry[] {
+	const { start, end } = exportBounds(range, firstDayOfWeek);
+	return entries.filter((entry) => {
+		const created = new Date(entry.createdAt);
+		return created >= start && created < end;
+	});
 }

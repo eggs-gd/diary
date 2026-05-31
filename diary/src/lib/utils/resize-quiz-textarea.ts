@@ -16,6 +16,13 @@ function getLineHeight(el: HTMLTextAreaElement): number {
 	return resolved;
 }
 
+export function resizeTextareaToContent(el: HTMLTextAreaElement): void {
+	el.style.height = 'auto';
+	const lineHeight = getLineHeight(el);
+	const contentLines = Math.max(1, Math.ceil(el.scrollHeight / lineHeight));
+	el.style.height = `${contentLines * lineHeight}px`;
+}
+
 /** Auto-height for quiz fields: min 2 lines, or content + 1 buffer line. */
 export function resizeQuizTextarea(
 	el: HTMLTextAreaElement,

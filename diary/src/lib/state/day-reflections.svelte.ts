@@ -1,5 +1,5 @@
 import type { DayReflection } from '$lib/events/types';
-import { loadDayReflections, saveDayReflection } from '$lib/storage';
+import { deleteDayReflections, loadDayReflections, saveDayReflection } from '$lib/storage';
 
 export class DayReflectionStore {
 	reflections = $state<DayReflection[]>([]);
@@ -22,6 +22,13 @@ export class DayReflectionStore {
 			reflection,
 			...this.reflections.filter((item) => item.dayKey !== reflection.dayKey)
 		];
+	}
+
+	async deleteByDayKeys(dayKeys: string[]): Promise<void> {
+		if (dayKeys.length === 0) return;
+		await deleteDayReflections(dayKeys);
+		const remove = new Set(dayKeys);
+		this.reflections = this.reflections.filter((reflection) => !remove.has(reflection.dayKey));
 	}
 }
 

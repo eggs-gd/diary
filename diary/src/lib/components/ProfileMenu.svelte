@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { AppButton, AppPopup, FieldLabel, IconButton } from '$lib/components/ui';
 	import { AppIcon } from '$lib/icons';
+	import { localDateKey } from '$lib/events/grouping';
 	import { useI18n } from '$lib/i18n';
 	import { eventStore } from '$lib/state/events.svelte';
+	import { dayReflectionStore } from '$lib/state/day-reflections.svelte';
 	import { track } from '$lib/analytics';
 	import ArchivePopup from './ArchivePopup.svelte';
 	import LocaleSwitcher from './LocaleSwitcher.svelte';
@@ -80,8 +82,22 @@
 	{entries}
 	onClose={closeArchive}
 	onDelete={async (ids) => {
+		const selected = new Set(ids);
+		const remainingDayKeys = new Set(
+			entries.filter((entry) => !selected.has(entry.id)).map((entry) => localDateKey(entry.createdAt))
+		);
+		const emptyDayKeys = [
+			...new Set(
+				entries
+					.filter((entry) => selected.has(entry.id))
+					.map((entry) => localDateKey(entry.createdAt))
+					.filter((dayKey) => !remainingDayKeys.has(dayKey))
+			)
+		];
+
 		track('archive_entries_deleted', { count: ids.length });
 		await eventStore.deleteByIds(ids);
+		await dayReflectionStore.deleteByDayKeys(emptyDayKeys);
 	}}
 />
 

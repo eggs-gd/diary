@@ -50,6 +50,13 @@ export class LocalDayReflectionRepository implements DayReflectionRepository {
 		localStorage.setItem(DAY_REFLECTIONS_STORAGE_KEY, JSON.stringify(reflections));
 	}
 
+	async deleteByDayKeys(dayKeys: string[]): Promise<void> {
+		if (typeof localStorage === 'undefined' || dayKeys.length === 0) return;
+		const remove = new Set(dayKeys);
+		const reflections = (await this.loadAll()).filter((reflection) => !remove.has(reflection.dayKey));
+		localStorage.setItem(DAY_REFLECTIONS_STORAGE_KEY, JSON.stringify(reflections));
+	}
+
 	async clear(): Promise<void> {
 		if (typeof localStorage === 'undefined') return;
 		localStorage.removeItem(DAY_REFLECTIONS_STORAGE_KEY);

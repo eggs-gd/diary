@@ -67,6 +67,11 @@ export async function saveDayReflection(reflection: DayReflection): Promise<void
 	await getDayReflectionRepository().save(reflection);
 }
 
+export async function deleteDayReflections(dayKeys: string[]): Promise<void> {
+	await ensureDayReflectionsReady();
+	await getDayReflectionRepository().deleteByDayKeys(dayKeys);
+}
+
 export async function clearDayReflections(): Promise<void> {
 	await ensureDayReflectionsReady();
 	await getDayReflectionRepository().clear();

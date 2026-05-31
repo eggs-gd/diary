@@ -79,7 +79,10 @@ export class SqliteDayReflectionRepository implements DayReflectionRepository {
 			this.readyPromise = (async () => {
 				const database = await getAppDatabase();
 				await migrateFromLocalStorage(database);
-			})();
+			})().catch((error) => {
+				this.readyPromise = null;
+				throw error;
+			});
 		}
 		return this.readyPromise;
 	}
@@ -96,6 +99,14 @@ export class SqliteDayReflectionRepository implements DayReflectionRepository {
 	async save(reflection: DayReflection): Promise<void> {
 		const database = await getAppDatabase();
 		await insertReflection(database, reflection);
+	}
+
+	async deleteByDayKeys(dayKeys: string[]): Promise<void> {
+		if (dayKeys.length === 0) return;
+
+		const database = await getAppDatabase();
+		const placeholders = dayKeys.map(() => '?').join(', ');
+		await database.run(`DELETE FROM day_reflections WHERE day_key IN (${placeholders})`, dayKeys);
 	}
 
 	async clear(): Promise<void> {

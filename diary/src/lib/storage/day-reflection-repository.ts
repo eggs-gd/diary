@@ -4,6 +4,7 @@ export interface DayReflectionRepository {
 	ensureReady(): Promise<void>;
 	loadAll(): Promise<DayReflection[]>;
 	save(reflection: DayReflection): Promise<void>;
+	deleteByDayKeys(dayKeys: string[]): Promise<void>;
 	clear(): Promise<void>;
 }
 

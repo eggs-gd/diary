@@ -181,7 +181,10 @@ export class SqliteEventRepository implements EventRepository {
 			this.readyPromise = (async () => {
 				const database = await getDatabase();
 				await migrateFromLocalStorage(database);
-			})();
+			})().catch((error) => {
+				this.readyPromise = null;
+				throw error;
+			});
 		}
 		return this.readyPromise;
 	}

@@ -1,29 +1,20 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { Capacitor } from '@capacitor/core';
 	import CaptureEvent from '$lib/components/CaptureEvent.svelte';
-	import ReflectionEvent from '$lib/components/ReflectionEvent.svelte';
-	import ReflectionReport from '$lib/components/ReflectionReport.svelte';
+	import EventReflection from '$lib/components/EventReflection.svelte';
 	import ReflectionDay from '$lib/components/ReflectionDay.svelte';
 	import ArchiveCalendar from '$lib/components/ArchiveCalendar.svelte';
-	import ReflectEntryCard from '$lib/components/ReflectEntryCard.svelte';
-	import ReflectStatusIcon from '$lib/components/ReflectStatusIcon.svelte';
-	import ScoreDots from '$lib/components/ScoreDots.svelte';
-	import { AppButton, AppFullscreen, AppPopup } from '$lib/components/ui';
+	import ArchiveExport from '$lib/components/ArchiveExport.svelte';
+	import ArchiveList from '$lib/components/ArchiveList.svelte';
 	import { AppIcon } from '$lib/icons';
-	import { entriesForDay, formatDayLabel, groupEventEntries, createdAtForDayKey } from '$lib/events/grouping';
-	import { normalizeEventKind, type EventKind } from '$lib/events/types';
-	import { getReflectionStatus } from '$lib/events/reflection-status';
+	import { entriesForDay, formatDayLabel, createdAtForDayKey } from '$lib/events/grouping';
+	import type { EventKind } from '$lib/events/types';
 	import { buildArchiveView } from '$lib/events/archive-view';
-	import type { DayReflectionCalendarState } from '$lib/events/day-reflection';
 	import type { EventEntry } from '$lib/events/types';
-	import { useI18n, getLocaleDateFormat } from '$lib/i18n';
-	import { reflectActionLabel } from '$lib/events/format';
+	import { useI18n } from '$lib/i18n';
 	import { useReflectionTone } from '$lib/preferences/reflection-tone.svelte';
 	import { hapticLight } from '$lib/platform/native';
 	import { initShareIntent } from '$lib/platform/share-intent';
-	import { buildAgentPrompt, buildArchiveMarkdown, archiveFilename } from '$lib/events/export';
-	import { resolveWeekStart } from '$lib/preferences/week-start';
 	import { useWeekStart } from '$lib/preferences/week-start.svelte';
 	import { eventStore } from '$lib/state/events.svelte';
 	import { dayReflectionStore } from '$lib/state/day-reflections.svelte';
@@ -33,7 +24,6 @@
 	const reflectionTone = useReflectionTone();
 	const weekStart = useWeekStart();
 
-	const groupedEntries = $derived(groupEventEntries(eventStore.entries, i18n.locale));
 	const archiveView = $derived(
 		buildArchiveView(
 			eventStore.entries,
@@ -65,13 +55,6 @@
 
 	const dayReflections = $derived(dayReflectionStore.reflections);
 
-	const reflectionReportOpen = $derived(
-		selectedEntry !== null && getReflectionStatus(selectedEntry) === 'complete'
-	);
-	const reflectionWizardOpen = $derived(
-		selectedEntry !== null && getReflectionStatus(selectedEntry) !== 'complete'
-	);
-
 	onMount(() => {
 		void eventStore.load();
 		void dayReflectionStore.load();
@@ -85,23 +68,6 @@
 		return () => teardownShareIntent?.();
 	});
 
-
-	function dayReflectionActionLabel(
-		dayLabel: string,
-		count: number,
-		state: DayReflectionCalendarState
-	): string {
-		const map: Record<DayReflectionCalendarState, string> = {
-			not_started: i18n.t('archive.dayReflectionNotStarted', { day: dayLabel, count }),
-			partial: i18n.t('archive.dayReflectionPartial', { day: dayLabel, count }),
-			complete: i18n.t('archive.dayReflectionComplete', { day: dayLabel, count })
-		};
-		return map[state];
-	}
-
-	function eventKindLabel(kind: EventKind): string {
-		return kind === 'act' ? i18n.t('capture.kindAct') : i18n.t('capture.kindEvent');
-	}
 
 	function openCapture(
 		text = '',
@@ -134,145 +100,12 @@
 		void hapticLight();
 	}
 
-	let exportPreviewOpen = $state(false);
-	let exportPreviewText = $state('');
-	let exportPreviewFilename = $state('');
-	let exportCopied = $state(false);
 	let exportSettingsOpen = $state(false);
-	let exportRange = $state<ExportRange>('today');
-	let exportMode = $state<ExportMode>('report');
-
-	type ExportRange = 'today' | 'week' | 'month';
-	type ExportMode = 'report' | 'agent';
-
-	const exportEntries = $derived(
-		filterEntriesByRange(
-			eventStore.entries,
-			exportRange,
-			resolveWeekStart(weekStart.preference, i18n.locale)
-		)
-	);
-
-	const exportRangeOptions: { value: ExportRange; labelKey: string }[] = [
-		{ value: 'today', labelKey: 'archive.exportToday' },
-		{ value: 'week', labelKey: 'archive.exportWeek' },
-		{ value: 'month', labelKey: 'archive.exportMonth' }
-	];
-
-	const exportModeOptions: { value: ExportMode; labelKey: string }[] = [
-		{ value: 'report', labelKey: 'archive.exportModeReport' },
-		{ value: 'agent', labelKey: 'archive.exportModeAgent' }
-	];
-
-	function startOfToday(): Date {
-		const now = new Date();
-		return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-	}
-
-	function addDays(date: Date, days: number): Date {
-		const next = new Date(date);
-		next.setDate(next.getDate() + days);
-		return next;
-	}
-
-	function exportBounds(range: ExportRange, firstDayOfWeek: 0 | 1): { start: Date; end: Date } {
-		const today = startOfToday();
-
-		if (range === 'today') {
-			return { start: today, end: addDays(today, 1) };
-		}
-
-		if (range === 'month') {
-			return {
-				start: new Date(today.getFullYear(), today.getMonth(), 1),
-				end: new Date(today.getFullYear(), today.getMonth() + 1, 1)
-			};
-		}
-
-		const offset = (today.getDay() - firstDayOfWeek + 7) % 7;
-		const start = addDays(today, -offset);
-		return { start, end: addDays(start, 7) };
-	}
-
-	function filterEntriesByRange(
-		entries: EventEntry[],
-		range: ExportRange,
-		firstDayOfWeek: 0 | 1
-	): EventEntry[] {
-		const { start, end } = exportBounds(range, firstDayOfWeek);
-		return entries.filter((entry) => {
-			const created = new Date(entry.createdAt);
-			return created >= start && created < end;
-		});
-	}
 
 	function openExportSettings(): void {
 		exportSettingsOpen = true;
-		exportCopied = false;
 		track('archive_export_settings_opened');
 		void hapticLight();
-	}
-
-	async function exportArchive(): Promise<void> {
-		if (!exportEntries.length) return;
-
-		const md = buildArchiveMarkdown(
-			groupEventEntries(exportEntries, i18n.locale),
-			dayReflectionStore.byDayKey,
-			(k, p) => i18n.t(k, p),
-			i18n.locale
-		);
-		const payload = exportMode === 'agent' ? buildAgentPrompt(md, i18n.locale) : md;
-		const filename = archiveFilename();
-
-		track('archive_exported', {
-			entries: exportEntries.length,
-			range: exportRange,
-			mode: exportMode
-		});
-		void hapticLight();
-		exportSettingsOpen = false;
-
-		// Native Share Sheet: send actual text, not an .md attachment.
-		if (Capacitor.isNativePlatform() && typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
-			try {
-				await navigator.share({
-					title: filename,
-					text: payload
-				});
-				return;
-			} catch (err) {
-				if (err instanceof Error && err.name === 'AbortError') return;
-			}
-		}
-
-		// Web -> show preview
-		exportPreviewText = payload;
-		exportPreviewFilename = filename;
-		exportPreviewOpen = true;
-		exportCopied = false;
-	}
-
-	function exportDownload(): void {
-		const blob = new Blob([exportPreviewText], { type: 'text/plain; charset=utf-8' });
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement('a');
-		a.href = url;
-		a.download = exportPreviewFilename;
-		document.body.appendChild(a);
-		a.click();
-		setTimeout(() => {
-			URL.revokeObjectURL(url);
-			a.remove();
-		}, 2000);
-	}
-
-	async function exportCopy(): Promise<void> {
-		try {
-			await navigator.clipboard.writeText(exportPreviewText);
-			exportCopied = true;
-			setTimeout(() => (exportCopied = false), 2000);
-		} catch {}
 	}
 
 	function openDayReflection(dayKey: string, returnTo: 'archive' | 'calendar' = 'archive'): void {
@@ -332,70 +165,7 @@
 		{#if eventStore.entries.length === 0}
 			<p class="empty">{i18n.t('archive.empty')}</p>
 		{:else}
-			<div class="entries-grouped">
-				{#each archiveView as year (year.key)}
-					<section class="group-year" aria-labelledby="journal-year-{year.key}">
-						<div class="group-year-head">
-							<h3 class="group-year-label" id="journal-year-{year.key}">{year.label}</h3>
-							{#if year.score !== null}
-								<ScoreDots compact original={year.score} />
-							{/if}
-						</div>
-						{#each year.months as month (month.key)}
-							<section class="group-month" aria-labelledby="journal-month-{month.key}">
-								<div class="group-month-head">
-									<h4 class="group-month-label" id="journal-month-{month.key}">{month.label}</h4>
-									{#if month.score !== null}
-										<ScoreDots compact original={month.score} />
-									{/if}
-								</div>
-								{#each month.days as day (day.key)}
-									<section class="group-day" aria-labelledby="journal-day-{day.key}">
-										<button
-											type="button"
-											class="day-head-card"
-											aria-label={dayReflectionActionLabel(
-												day.label,
-												day.entries.length,
-												day.reflectionState
-											)}
-											onclick={() => openDayReflection(day.key)}
-										>
-											<h5 class="group-day-label" id="journal-day-{day.key}">{day.label}</h5>
-											<div class="group-day-actions">
-												{#if day.score !== null}
-													<ScoreDots compact original={day.score} />
-												{/if}
-												{#if day.reflectionIcon}
-													<ReflectStatusIcon name={day.reflectionIcon} />
-												{/if}
-											</div>
-										</button>
-										<ul class="entries">
-											{#each day.entries as entry (entry.id)}
-												{@const reflectStatus = getReflectionStatus(entry)}
-												<li>
-													<ReflectEntryCard
-														{entry}
-														{reflectStatus}
-														actionLabel={reflectActionLabel(reflectStatus, (k) => i18n.t(k))}
-														kindLabel={eventKindLabel(normalizeEventKind(entry.kind))}
-														timeLabel={new Date(entry.createdAt).toLocaleTimeString(
-															getLocaleDateFormat(i18n.locale),
-															{ hour: '2-digit', minute: '2-digit' }
-														)}
-														onOpen={() => openAnalysis(entry)}
-													/>
-												</li>
-											{/each}
-										</ul>
-									</section>
-								{/each}
-							</section>
-						{/each}
-					</section>
-				{/each}
-			</div>
+			<ArchiveList {archiveView} onOpenDay={openDayReflection} onOpenEntry={openAnalysis} />
 		{/if}
 	</section>
 </main>
@@ -446,113 +216,15 @@
 	onOpenEntry={openAnalysis}
 />
 
-<ReflectionEvent
-	open={reflectionWizardOpen}
-	entry={selectedEntry}
-	onClose={() => (selectedEntry = null)}
-	onPersist={async (updated) => {
-		await eventStore.update(updated);
-		selectedEntry = updated;
-	}}
-	onComplete={async (updated) => {
-		await eventStore.update(updated);
-		track('reflection_saved', {
-			score: updated.protocol?.reflectionScore ?? updated.score
-		});
-		void hapticLight();
-		selectedEntry = null;
-	}}
-/>
+<EventReflection bind:entry={selectedEntry} />
 
-<ReflectionReport
-	open={reflectionReportOpen}
-	entry={selectedEntry}
-	onClose={() => (selectedEntry = null)}
-	onPersist={async (updated) => {
-		await eventStore.update(updated);
-		selectedEntry = updated;
-	}}
-/>
-
-<AppPopup
+<ArchiveExport
 	open={exportSettingsOpen}
-	title={i18n.t('archive.exportSettingsTitle')}
-	titleId="archive-export-settings-title"
+	entries={eventStore.entries}
+	dayReflections={dayReflectionStore.byDayKey}
+	weekStart={weekStart.preference}
 	onClose={() => (exportSettingsOpen = false)}
->
-	{#snippet children()}
-		<div class="export-settings">
-			<section class="export-setting-group" aria-labelledby="archive-export-range-title">
-				<h4 id="archive-export-range-title" class="export-setting-title">
-					{i18n.t('archive.exportRange')}
-				</h4>
-				<div class="export-segmented">
-					{#each exportRangeOptions as option}
-						<button
-							type="button"
-							class="export-segment"
-							class:active={exportRange === option.value}
-							aria-pressed={exportRange === option.value}
-							onclick={() => (exportRange = option.value)}
-						>
-							{i18n.t(option.labelKey)}
-						</button>
-					{/each}
-				</div>
-			</section>
-
-			<section class="export-setting-group" aria-labelledby="archive-export-mode-title">
-				<h4 id="archive-export-mode-title" class="export-setting-title">
-					{i18n.t('archive.exportMode')}
-				</h4>
-				<div class="export-segmented">
-					{#each exportModeOptions as option}
-						<button
-							type="button"
-							class="export-segment"
-							class:active={exportMode === option.value}
-							aria-pressed={exportMode === option.value}
-							onclick={() => (exportMode = option.value)}
-						>
-							{i18n.t(option.labelKey)}
-						</button>
-					{/each}
-				</div>
-			</section>
-
-			<p class="export-count">
-				{i18n.t('archive.exportSelectedCount', { count: exportEntries.length })}
-			</p>
-		</div>
-	{/snippet}
-
-	{#snippet footer()}
-		<AppButton variant="primary" disabled={exportEntries.length === 0} onclick={() => void exportArchive()}>
-			{i18n.t('archive.exportContinue')}
-		</AppButton>
-	{/snippet}
-</AppPopup>
-
-<AppFullscreen
-	open={exportPreviewOpen}
-	title={exportPreviewFilename || i18n.t('archive.share')}
-	titleId="archive-export-title"
-	onClose={() => (exportPreviewOpen = false)}
->
-	{#snippet children()}
-		<div class="export-preview">
-			<div class="export-actions">
-				<AppButton variant="secondary" onclick={exportDownload}>
-					{i18n.t('archive.download')}
-				</AppButton>
-				<AppButton variant="secondary" onclick={() => void exportCopy()}>
-					{exportCopied ? i18n.t('archive.copied') : i18n.t('archive.copy')}
-				</AppButton>
-			</div>
-			<pre class="export-text">{exportPreviewText}</pre>
-		</div>
-	{/snippet}
-</AppFullscreen>
+/>
 
 <style>
 	.main {
@@ -638,252 +310,4 @@
 		color: var(--text-muted);
 	}
 
-	.entries-grouped {
-		display: flex;
-		flex-direction: column;
-		gap: 1.75rem;
-		margin-top: var(--space-5);
-	}
-
-	.group-year,
-	.group-month,
-	.group-day {
-		margin: 0;
-	}
-
-	.group-year-label,
-	.group-month-label,
-	.group-day-label {
-		margin: 0;
-		font-weight: 400;
-	}
-
-	.group-year-head,
-	.group-month-head {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: var(--space-3);
-		min-width: 0;
-	}
-
-	.group-year-label {
-		flex: 1;
-		min-width: 0;
-		font-family: var(--font-serif);
-		font-size: var(--text-xl);
-		color: var(--text-muted);
-		letter-spacing: var(--tracking-caps);
-		margin-bottom: var(--space-4);
-	}
-
-	.group-year-head {
-		margin-bottom: var(--space-4);
-	}
-
-	.group-month-head {
-		margin-bottom: var(--space-3);
-	}
-
-	.group-month {
-		margin-bottom: var(--space-5);
-	}
-
-	.group-month:last-child {
-		margin-bottom: 0;
-	}
-
-	.group-month-label {
-		flex: 1;
-		min-width: 0;
-		font-size: var(--text-sm);
-		text-transform: uppercase;
-		letter-spacing: var(--tracking-wide);
-		color: var(--text-faint);
-		margin-bottom: var(--space-3);
-	}
-
-	.group-year-head .group-year-label {
-		margin-bottom: 0;
-	}
-
-	.group-month-head .group-month-label {
-		margin-bottom: 0;
-	}
-
-	.group-day {
-		margin-bottom: var(--space-4);
-	}
-
-	.group-day:last-child {
-		margin-bottom: 0;
-	}
-
-	.group-day-label {
-		flex: 1;
-		min-width: 0;
-		font-family: var(--font-serif);
-		font-size: var(--text-lg);
-		color: var(--text-muted);
-		margin-bottom: var(--space-1);
-	}
-
-	.day-head-card {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: var(--space-3);
-		width: 100%;
-		min-width: 0;
-		margin: 0 0 var(--space-1);
-		padding: var(--space-1) 0;
-		border: none;
-		border-radius: 0;
-		background: transparent;
-		text-align: left;
-		cursor: pointer;
-		transition: background var(--transition-interactive);
-		-webkit-tap-highlight-color: transparent;
-	}
-
-	.day-head-card:hover,
-	.day-head-card:focus-visible {
-		background: var(--fill-subtle);
-		outline: none;
-	}
-
-	.day-head-card .group-day-label {
-		margin-bottom: 0;
-	}
-
-	.group-day-actions {
-		display: flex;
-		align-items: center;
-		gap: var(--space-2);
-		flex-shrink: 0;
-	}
-
-	.entries {
-		list-style: none;
-		padding: 0;
-		margin: 0;
-	}
-
-	.entries li {
-		border: none;
-	}
-
-	.entries li:last-child :global(.reflect-entry) {
-		border-bottom: none;
-	}
-
-	.export-settings {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-4);
-	}
-
-	.export-setting-group {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-2);
-	}
-
-	.export-setting-title {
-		margin: 0;
-		color: var(--text-faint);
-		font-size: var(--text-xs);
-		font-weight: 500;
-		text-transform: uppercase;
-		letter-spacing: var(--tracking-wide);
-	}
-
-	.export-segmented {
-		display: grid;
-		grid-template-columns: repeat(3, minmax(0, 1fr));
-		gap: var(--space-1);
-	}
-
-	.export-setting-group:nth-child(2) .export-segmented {
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-	}
-
-	.export-segment {
-		min-height: var(--size-touch);
-		padding: var(--space-2);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		background: transparent;
-		color: var(--text-faint);
-		font: inherit;
-		font-size: var(--text-xs);
-		text-transform: uppercase;
-		letter-spacing: var(--tracking-wide);
-		cursor: pointer;
-		transition: var(--transition-interactive);
-		-webkit-tap-highlight-color: transparent;
-	}
-
-	.export-segment:hover,
-	.export-segment:focus-visible {
-		border-color: var(--accent-dim);
-		color: var(--text-muted);
-		outline: none;
-	}
-
-	.export-segment.active {
-		border-color: var(--accent-dim);
-		background: var(--fill-muted);
-		color: var(--text);
-	}
-
-	.export-count {
-		margin: 0;
-		color: var(--text-muted);
-		font-size: var(--text-sm);
-	}
-
-	.export-preview {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-4);
-		width: 100%;
-		max-width: var(--content-max-width);
-		margin: 0 auto;
-	}
-
-	.export-actions {
-		display: grid;
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: var(--space-2);
-	}
-
-	.export-text {
-		white-space: pre-wrap;
-		overflow-wrap: anywhere;
-		margin: 0;
-		padding: var(--space-4);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		background: var(--bg-elevated);
-		color: var(--text-soft);
-		font-family: var(--font-sans);
-		font-size: var(--text-sm);
-		line-height: var(--leading-normal);
-	}
-
-	@media (max-width: 24rem) {
-		.entries :global(.reflect-entry__head) {
-			flex-wrap: wrap;
-		}
-
-		.export-actions {
-			grid-template-columns: 1fr;
-		}
-
-		.export-segmented,
-		.export-setting-group:nth-child(2) .export-segmented {
-			grid-template-columns: 1fr;
-		}
-	}
 </style>

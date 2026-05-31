@@ -12,6 +12,7 @@
 	import { track } from '$lib/analytics';
 	import { protocolFieldLabel } from '$lib/events/format';
 	import { shouldSaveReflectionScore } from '$lib/events/reflection-status';
+	import { resizeTextareaToContent } from '$lib/utils/resize-quiz-textarea';
 
 	const protocolFields = ['reason', 'about', 'view', 'actions'] as const;
 	type ProtocolField = (typeof protocolFields)[number];
@@ -57,6 +58,7 @@
 	let baselineEventKind = $state<EventKind>('event');
 
 	let eventInput = $state<HTMLTextAreaElement | null>(null);
+	let eventInputResizeFrame: number | null = null;
 
 	const hasChanges = $derived(
 		draft.event.trim() !== baselineDraft.event.trim() ||
@@ -117,7 +119,13 @@
 	$effect(() => {
 		if (!open || !editingEvent) return;
 		draft.event;
-		void tick().then(() => resizeEventInput());
+		void tick().then(queueEventInputResize);
+	});
+
+	$effect(() => {
+		return () => {
+			if (eventInputResizeFrame !== null) cancelAnimationFrame(eventInputResizeFrame);
+		};
 	});
 
 	function reflectionLabel(field: ProtocolField): string {
@@ -127,13 +135,15 @@
 	function resizeEventInput(): void {
 		const el = eventInput;
 		if (!el) return;
+		resizeTextareaToContent(el);
+	}
 
-		el.style.height = 'auto';
-		const lineHeight = parseFloat(getComputedStyle(el).lineHeight);
-		if (!Number.isFinite(lineHeight) || lineHeight <= 0) return;
-
-		const contentLines = Math.max(1, Math.ceil(el.scrollHeight / lineHeight));
-		el.style.height = `${contentLines * lineHeight}px`;
+	function queueEventInputResize(): void {
+		if (eventInputResizeFrame !== null) return;
+		eventInputResizeFrame = requestAnimationFrame(() => {
+			eventInputResizeFrame = null;
+			resizeEventInput();
+		});
 	}
 
 	async function focusEventInput(): Promise<void> {
@@ -141,7 +151,7 @@
 		await tick();
 		requestAnimationFrame(() => {
 			eventInput?.focus({ preventScroll: true });
-			resizeEventInput();
+			queueEventInputResize();
 		});
 		void hapticLight();
 	}
@@ -216,7 +226,7 @@
 					rows="1"
 					aria-label={i18n.t('capture.event')}
 					onblur={onEventBlur}
-					oninput={resizeEventInput}
+					oninput={queueEventInputResize}
 				></textarea>
 			{:else}
 				<button
