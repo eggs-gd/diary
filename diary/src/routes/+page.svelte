@@ -2,7 +2,9 @@
 	import { onMount } from 'svelte';
 	import { AppButton } from '$lib/components/ui';
 	import ReflectionEvent from '$lib/components/ReflectionEvent.svelte';
+	import ScoreDots from '$lib/components/ScoreDots.svelte';
 	import { groupEventEntries } from '$lib/events/grouping';
+	import { getReflectionStatus, type ReflectionStatus } from '$lib/events/reflection-status';
 	import type { EventEntry } from '$lib/events/types';
 	import { useI18n } from '$lib/i18n';
 	import { hapticLight } from '$lib/platform/native';
@@ -36,20 +38,21 @@
 			linear-gradient(90deg, transparent ${marker}%, color-mix(in srgb, var(--bg) 56%, transparent) ${marker}%)`;
 	}
 
-	function entryIntensity(value: number): string {
-		return `${Math.round(Math.min(1, Math.max(0.16, Math.abs(value) / 10)) * 24)}%`;
-	}
-
 	function scoreLabel(value: number): string {
 		return value > 0 ? `+${value}` : String(value);
 	}
 
-	function displayScore(entry: EventEntry): number {
-		return entry.protocol?.reflectionScore ?? entry.score;
-	}
-
 	function tone(scoreValue: number): 'negative' | 'positive' {
 		return scoreValue <= 0 ? 'negative' : 'positive';
+	}
+
+	function reflectActionLabel(status: ReflectionStatus): string {
+		const map: Record<ReflectionStatus, string> = {
+			empty: i18n.t('archive.reflectEmpty'),
+			partial: i18n.t('archive.reflectPartial'),
+			complete: i18n.t('archive.reflectComplete')
+		};
+		return map[status];
 	}
 
 	async function submitEvent(): Promise<void> {
@@ -144,13 +147,9 @@
 										<h5 class="group-day-label" id="journal-day-{day.key}">{day.label}</h5>
 										<ul class="entries">
 											{#each day.entries as entry (entry.id)}
+												{@const reflectStatus = getReflectionStatus(entry)}
 												<li>
-													<article
-														class="entry"
-														class:negative={displayScore(entry) <= 0}
-														class:positive={displayScore(entry) > 0}
-														style:--entry-intensity={entryIntensity(displayScore(entry))}
-													>
+													<article class="entry">
 														<div class="entry-head">
 															<p class="entry-text">{entry.text}</p>
 															<time
@@ -164,21 +163,32 @@
 															</time>
 														</div>
 														<div class="entry-foot">
-															<p class="entry-score">
-																{#if entry.protocol?.reflectionScore !== undefined}
-																	<span class="score-original">{scoreLabel(entry.score)}</span>
-																	<span class="score-arrow">→</span>
-																	<span class="score-reflected">{scoreLabel(entry.protocol.reflectionScore)}</span>
-																{:else}
-																	{scoreLabel(entry.score)}
-																{/if}
-															</p>
+															<ScoreDots
+																original={entry.score}
+																reflected={entry.protocol?.reflectionScore}
+															/>
 															<button
 																type="button"
-																class="analyze"
+																class="reflect-action"
+																class:reflect-action--empty={reflectStatus === 'empty'}
+																class:reflect-action--partial={reflectStatus === 'partial'}
+																class:reflect-action--complete={reflectStatus === 'complete'}
+																aria-label={reflectActionLabel(reflectStatus)}
 																onclick={() => openAnalysis(entry)}
 															>
-																{i18n.t('archive.return')}
+																{#if reflectStatus === 'complete'}
+																	<svg viewBox="0 0 24 24" aria-hidden="true">
+																		<path
+																			d="M12 4V1 8 5 12 1v3c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0 0 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74A7.93 7.93 0 0 0 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"
+																		/>
+																	</svg>
+																{:else}
+																	<svg viewBox="0 0 24 24" aria-hidden="true">
+																		<path
+																			d="M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41Z"
+																		/>
+																	</svg>
+																{/if}
 															</button>
 														</div>
 													</article>
@@ -287,9 +297,6 @@
 	}
 
 	.archive {
-		margin-top: var(--space-7);
-		padding-top: var(--space-6);
-		border-top: 1px solid var(--border);
 		margin-bottom: var(--space-7);
 	}
 
@@ -395,26 +402,7 @@
 		display: grid;
 		gap: var(--space-2);
 		padding: var(--space-3) 0;
-		border-bottom: 2px solid var(--border);
-		transition: var(--transition);
-	}
-
-	.entry.positive {
-		border-bottom-color: color-mix(in srgb, var(--accent-leaf) 54%, transparent);
-		background: linear-gradient(
-			to top,
-			color-mix(in srgb, var(--accent-leaf) var(--entry-intensity, 4%), transparent) 0%,
-			transparent 58%
-		);
-	}
-
-	.entry.negative {
-		border-bottom-color: color-mix(in srgb, var(--accent-rose) 48%, transparent);
-		background: linear-gradient(
-			to top,
-			color-mix(in srgb, var(--accent-rose) var(--entry-intensity, 4%), transparent) 0%,
-			transparent 58%
-		);
+		border-bottom: 1px solid var(--border);
 	}
 
 	.entry-head {
@@ -451,42 +439,47 @@
 		gap: var(--space-3);
 	}
 
-	.entry-score {
-		display: flex;
-		align-items: center;
-		gap: var(--space-2);
-		font-family: var(--font-serif);
-		font-size: var(--text-lg);
-		color: var(--text-muted);
-	}
-
-	.analyze {
+	.reflect-action {
+		display: inline-flex;
 		flex-shrink: 0;
+		margin-left: auto;
+		align-items: center;
 		padding: var(--space-1) 0;
 		border: none;
 		background: none;
-		color: var(--accent);
-		font: inherit;
-		font-size: var(--text-xs);
-		text-transform: uppercase;
-		letter-spacing: var(--tracking-caps);
+		color: var(--text-faint);
 		cursor: pointer;
+		transition: color var(--transition-interactive);
 		-webkit-tap-highlight-color: transparent;
 	}
 
-	.score-original {
-		color: var(--text-faint);
-		font-size: var(--text-base);
+	.reflect-action svg {
+		width: 1.125rem;
+		height: 1.125rem;
+		fill: currentColor;
 	}
 
-	.score-arrow {
-		color: var(--text-faint);
-		font-size: var(--text-sm);
-		font-family: var(--font-sans);
+	.reflect-action--empty {
+		color: var(--accent);
 	}
 
-	.score-reflected {
+	.reflect-action--partial {
+		color: var(--text-faint);
+	}
+
+	.reflect-action--complete {
 		color: var(--text-muted);
+	}
+
+	.reflect-action:hover,
+	.reflect-action:focus-visible {
+		color: var(--text-soft);
+		outline: none;
+	}
+
+	.reflect-action--empty:hover,
+	.reflect-action--empty:focus-visible {
+		color: var(--accent-dim);
 	}
 
 	@media (max-width: 24rem) {

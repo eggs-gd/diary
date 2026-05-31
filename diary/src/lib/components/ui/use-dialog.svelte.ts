@@ -37,7 +37,6 @@ export function useDialog(
 		if (!d) return;
 		if (getOpen() && !d.open) {
 			d.showModal();
-			requestAnimationFrame(blurActiveElement);
 		} else if (!getOpen() && d.open) {
 			d.close();
 		}

@@ -3,6 +3,8 @@
 	import { browser } from '$app/environment';
 	import { portalToBody } from '$lib/actions/portal-to-body';
 	import { useI18n } from '$lib/i18n';
+	import { subscribeVisualViewport } from '$lib/platform/keyboard-viewport';
+	import { lockDocumentScroll } from '$lib/platform/scroll-lock';
 	import AppButton from './AppButton.svelte';
 	import { useDialog } from './use-dialog.svelte';
 
@@ -15,6 +17,10 @@
 		onClose: () => void;
 		children: Snippet;
 		header?: Snippet;
+		bodyFill?: boolean;
+		keyboardAware?: boolean;
+		showClose?: boolean;
+		onViewportChange?: () => void;
 	}
 
 	let {
@@ -25,7 +31,11 @@
 		closeLabel,
 		onClose,
 		children,
-		header
+		header,
+		bodyFill = false,
+		keyboardAware = false,
+		showClose = true,
+		onViewportChange
 	}: Props = $props();
 
 	const i18n = useI18n();
@@ -33,7 +43,6 @@
 	const ariaLabelId = $derived(labelledBy ?? (header ? undefined : titleId));
 
 	let dialog = $state<HTMLDialogElement | null>(null);
-	let scrollLockY = 0;
 
 	const { dismiss, handleDialogClose, handleCancel } = useDialog(
 		() => open,
@@ -44,23 +53,12 @@
 	$effect(() => {
 		if (!browser || !open) return;
 
-		scrollLockY = window.scrollY;
-		document.documentElement.classList.add('scroll-locked');
-		document.body.style.position = 'fixed';
-		document.body.style.top = `-${scrollLockY}px`;
-		document.body.style.left = '0';
-		document.body.style.right = '0';
-		document.body.style.width = '100%';
-
-		return () => {
-			document.documentElement.classList.remove('scroll-locked');
-			document.body.style.position = '';
-			document.body.style.top = '';
-			document.body.style.left = '';
-			document.body.style.right = '';
-			document.body.style.width = '';
-			window.scrollTo(0, scrollLockY);
-		};
+		dialog;
+		return lockDocumentScroll(() => dialog);
+	});
+	$effect(() => {
+		if (!browser || !open || !keyboardAware || !dialog) return;
+		return subscribeVisualViewport(dialog, () => onViewportChange?.());
 	});
 </script>
 
@@ -68,6 +66,7 @@
 	use:portalToBody
 	bind:this={dialog}
 	class="fullscreen"
+	class:keyboard-aware={keyboardAware}
 	tabindex="-1"
 	aria-labelledby={ariaLabelId}
 	onclose={handleDialogClose}
@@ -83,13 +82,15 @@
 		</header>
 	{/if}
 
-	<div class="shell-body">
+	<div class="shell-body" class:shell-body--fill={bodyFill} class:shell-body--no-close={!showClose}>
 		{@render children()}
 	</div>
 
-	<div class="shell-close">
-		<AppButton variant="popup-close" onclick={dismiss}>{resolvedCloseLabel}</AppButton>
-	</div>
+	{#if showClose}
+		<div class="shell-close">
+			<AppButton variant="popup-close" onclick={dismiss}>{resolvedCloseLabel}</AppButton>
+		</div>
+	{/if}
 </dialog>
 
 <style>
@@ -119,6 +120,16 @@
 		flex-direction: column;
 	}
 
+	.fullscreen.keyboard-aware {
+		inset: auto;
+		left: 0;
+		right: 0;
+		width: 100%;
+		top: var(--visual-viewport-offset-top, 0px);
+		height: var(--visual-viewport-height, 100dvh);
+		max-height: var(--visual-viewport-height, 100dvh);
+	}
+
 	.fullscreen::backdrop {
 		background: var(--overlay-scrim);
 	}
@@ -132,7 +143,7 @@
 	}
 
 	.shell-header--custom {
-		padding-bottom: var(--space-3);
+		padding-bottom: var(--space-2);
 	}
 
 	.shell-title {
@@ -153,6 +164,15 @@
 		padding: var(--space-4) calc(var(--space-4) + env(safe-area-inset-right, 0px))
 			calc(5rem + env(safe-area-inset-bottom, 0px))
 			calc(var(--space-4) + env(safe-area-inset-left, 0px));
+	}
+
+	.shell-body--fill {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.shell-body--no-close {
+		padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
 	}
 
 	.shell-close {

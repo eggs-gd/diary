@@ -1,8 +1,10 @@
 <script lang="ts">
-	import { AppButton, AppFullscreen } from '$lib/components/ui';
+	import { tick } from 'svelte';
+	import { AppFullscreen } from '$lib/components/ui';
 	import type { EventEntry, ReflectionProtocol } from '$lib/events/types';
 	import { useI18n } from '$lib/i18n';
 	import { hapticLight } from '$lib/platform/native';
+	import { shouldSaveReflectionScore } from '$lib/events/reflection-status';
 
 	interface Props {
 		open: boolean;
@@ -28,14 +30,23 @@
 	let saving = $state(false);
 	let stepIndex = $state(0);
 	let loadedEntryId = $state<string | null>(null);
+	let quizInput = $state<HTMLTextAreaElement | null>(null);
+	let quizInputWrap = $state<HTMLDivElement | null>(null);
+	let eventInput = $state<HTMLTextAreaElement | null>(null);
+	let inputFocused = $state(false);
 
 	const reflectionRangeFill = $derived(getRangeFill(reflectionScore));
 	const protocolFields = ['reason', 'about', 'view', 'actions'] as const;
 	const totalSteps = protocolFields.length + 1;
 	const isResonanceStep = $derived(stepIndex === protocolFields.length);
 	const currentField = $derived(protocolFields[stepIndex] ?? protocolFields[0]);
+	const showInputDisplay = $derived(!inputFocused);
+	const showEmptyPlaceholder = $derived(!draft[currentField]?.trim());
 	const canGoBack = $derived(stepIndex > 0);
 	const canGoForward = $derived(stepIndex < totalSteps - 1);
+
+	const QUIZ_MIN_LINES = 2;
+	const QUIZ_BUFFER_LINES = 1;
 
 	$effect(() => {
 		if (!entry || entry.id === loadedEntryId) return;
@@ -43,6 +54,7 @@
 		loadedEntryId = entry.id;
 		stepIndex = 0;
 		editingEvent = false;
+		inputFocused = false;
 
 		const p = entry.protocol;
 		draft = {
@@ -59,7 +71,99 @@
 		if (!open) {
 			editingEvent = false;
 			loadedEntryId = null;
+			inputFocused = false;
 		}
+	});
+
+	async function focusQuizInput(): Promise<void> {
+		inputFocused = true;
+		await tick();
+		requestAnimationFrame(() => {
+			quizInput?.focus({ preventScroll: true });
+			resizeQuizInput();
+		});
+	}
+
+	function resizeQuizInput(): void {
+		const el = quizInput;
+		const wrap = quizInputWrap;
+		if (!el || !wrap) return;
+
+		const hidden = el.classList.contains('quiz-input--hidden');
+		if (hidden) {
+			el.style.position = 'static';
+			el.style.opacity = '0';
+			el.style.pointerEvents = 'none';
+		}
+
+		el.style.height = 'auto';
+
+		const lineHeight = parseFloat(getComputedStyle(el).lineHeight);
+		if (!Number.isFinite(lineHeight) || lineHeight <= 0) return;
+
+		const contentLines = Math.max(1, Math.ceil(el.scrollHeight / lineHeight));
+		const totalLines = Math.max(QUIZ_MIN_LINES, contentLines + QUIZ_BUFFER_LINES);
+		const height = `${totalLines * lineHeight}px`;
+
+		wrap.style.minHeight = height;
+		el.style.height = height;
+
+		if (hidden) {
+			el.style.position = '';
+			el.style.opacity = '';
+			el.style.pointerEvents = '';
+		}
+	}
+
+	function resizeEventInput(): void {
+		const el = eventInput;
+		if (!el) return;
+
+		el.style.height = 'auto';
+		const lineHeight = parseFloat(getComputedStyle(el).lineHeight);
+		if (!Number.isFinite(lineHeight) || lineHeight <= 0) return;
+
+		const contentLines = Math.max(1, Math.ceil(el.scrollHeight / lineHeight));
+		el.style.height = `${contentLines * lineHeight}px`;
+	}
+
+	async function focusEventInput(): Promise<void> {
+		editingEvent = true;
+		await tick();
+		requestAnimationFrame(() => {
+			eventInput?.focus({ preventScroll: true });
+			resizeEventInput();
+		});
+		void hapticLight();
+	}
+
+	function resizeViewport(): void {
+		resizeQuizInput();
+		resizeEventInput();
+	}
+
+	$effect(() => {
+		if (!open || isResonanceStep || !entry) return;
+		draft[currentField];
+		stepIndex;
+		showInputDisplay;
+		showEmptyPlaceholder;
+		inputFocused;
+		void tick().then(() => resizeQuizInput());
+	});
+
+	$effect(() => {
+		if (!open || !editingEvent) return;
+		draft.event;
+		void tick().then(() => resizeEventInput());
+	});
+
+	$effect(() => {
+		if (!open || !entry || isResonanceStep) return;
+		stepIndex;
+
+		inputFocused = false;
+		void tick().then(() => quizInput?.blur());
 	});
 
 	function getRangeFill(value: number): string {
@@ -86,9 +190,16 @@
 		return map[key];
 	}
 
-	function buildEntry(): EventEntry | null {
+	function buildEntry(finalize = false): EventEntry | null {
 		if (!entry) return null;
-		const protocol: ReflectionProtocol = { ...draft, reflectionScore };
+		const protocol: ReflectionProtocol = { ...draft };
+		if (finalize) {
+			if (shouldSaveReflectionScore(entry, draft, reflectionScore)) {
+				protocol.reflectionScore = reflectionScore;
+			}
+		} else if (entry.protocol?.reflectionScore !== undefined) {
+			protocol.reflectionScore = entry.protocol.reflectionScore;
+		}
 		return { ...entry, text: draft.event.trim() || entry.text, protocol };
 	}
 
@@ -117,13 +228,18 @@
 		void hapticLight();
 	}
 
-	function toggleEventEdit(): void {
-		editingEvent = !editingEvent;
-		void hapticLight();
+	function onEventBlur(): void {
+		editingEvent = false;
+	}
+
+	async function backToArchive(): Promise<void> {
+		await persistDraft();
+		editingEvent = false;
+		onClose();
 	}
 
 	async function completeReflection(): Promise<void> {
-		const updated = buildEntry();
+		const updated = buildEntry(true);
 		if (!updated || saving) return;
 		saving = true;
 		try {
@@ -136,52 +252,70 @@
 	}
 </script>
 
-{#snippet header()}
-	<div class="event-header">
-		{#if editingEvent}
-			<textarea
-				id="reflection-event-title"
-				class="event-header__input"
-				bind:value={draft.event}
-				rows="2"
-				aria-label={i18n.t('capture.event')}
-			></textarea>
-		{:else}
-			<h1 id="reflection-event-title" class="event-header__title">
-				{draft.event.trim() || entry?.text || '—'}
-			</h1>
-		{/if}
+{#snippet editIcon()}
+	<svg class="inline-edit-icon" viewBox="0 0 24 24" aria-hidden="true">
+		<path
+			d="M4 17.5V20h2.5L17 9.5 14.5 7 4 17.5Zm14.7-8.8a1 1 0 0 0 0-1.4l-1-1a1 1 0 0 0-1.4 0l-1 1 2.4 2.4 1-1Z"
+		/>
+	</svg>
+{/snippet}
 
-		<button
-			type="button"
-			class="event-header__edit"
-			class:active={editingEvent}
-			aria-label={i18n.t('analysis.edit')}
-			aria-pressed={editingEvent}
-			onclick={toggleEventEdit}
-		>
-			<svg viewBox="0 0 24 24" aria-hidden="true">
-				<path
-					d="M4 17.5V20h2.5L17 9.5 14.5 7 4 17.5Zm14.7-8.8a1 1 0 0 0 0-1.4l-1-1a1 1 0 0 0-1.4 0l-1 1 2.4 2.4 1-1Z"
-				/>
-			</svg>
+{#snippet header()}
+	<div class="event-shell">
+		<button type="button" class="event-back" onclick={() => void backToArchive()}>
+			{i18n.t('analysis.back')}
 		</button>
+
+		<div class="event-header">
+			{#if editingEvent}
+				<textarea
+					id="reflection-event-title"
+					bind:this={eventInput}
+					class="event-header__input"
+					bind:value={draft.event}
+					rows="1"
+					aria-label={i18n.t('capture.event')}
+					onblur={onEventBlur}
+					oninput={resizeEventInput}
+				></textarea>
+			{:else}
+				<button
+					type="button"
+					id="reflection-event-title"
+					class="event-header__title"
+					aria-label={i18n.t('analysis.edit')}
+					onclick={() => void focusEventInput()}
+				>
+					{draft.event.trim() || entry?.text || '—'}{@render editIcon()}
+				</button>
+			{/if}
+		</div>
 	</div>
 {/snippet}
 
 <AppFullscreen
 	{open}
+	bodyFill
+	keyboardAware
+	showClose={false}
+	onViewportChange={resizeViewport}
 	labelledBy="reflection-event-title"
-	closeLabel={i18n.t('common.close')}
 	{onClose}
 	{header}
 >
 	{#snippet children()}
 		{#if entry}
 			<div class="reflection">
-				<section class="quiz-step" aria-live="polite">
+				<div class="reflection-gap" aria-hidden="true"></div>
+
+				<section class="quiz-step" class:quiz-step--resonance={isResonanceStep} aria-live="polite">
+					<h2 class="quiz-question">
+						{isResonanceStep
+							? i18n.t('analysis.resonanceQuestion')
+							: reflectionLabel(currentField)}
+					</h2>
+
 					{#if isResonanceStep}
-						<h2 class="quiz-question">{i18n.t('analysis.resonanceQuestion')}</h2>
 						<div class="rf-resonance">
 							<div class="rf-score-row">
 								<p
@@ -205,140 +339,217 @@
 							</div>
 						</div>
 					{:else}
-						<h2 class="quiz-question">{reflectionLabel(currentField)}</h2>
-						<textarea
-							class="quiz-input"
-							bind:value={draft[currentField]}
-							rows="6"
-							placeholder={reflectionLabel(currentField)}
-							aria-label={reflectionLabel(currentField)}
-						></textarea>
+						<div class="quiz-input-wrap" bind:this={quizInputWrap}>
+							{#if showInputDisplay}
+								<button
+									type="button"
+									class="quiz-input-display"
+									class:quiz-input-display--placeholder={showEmptyPlaceholder}
+									aria-label={i18n.t('analysis.edit')}
+									onclick={() => void focusQuizInput()}
+								>
+									{#if showEmptyPlaceholder}
+										{i18n.t('analysis.writePlaceholder')}{@render editIcon()}
+									{:else}
+										{draft[currentField]}{@render editIcon()}
+									{/if}
+								</button>
+							{:else if showEmptyPlaceholder}
+								<div class="quiz-input-placeholder" aria-hidden="true">
+									{i18n.t('analysis.writePlaceholder')}{@render editIcon()}
+								</div>
+							{/if}
+							<textarea
+								bind:this={quizInput}
+								class="quiz-input"
+								class:quiz-input--hidden={showInputDisplay}
+								bind:value={draft[currentField]}
+								rows={QUIZ_MIN_LINES}
+								aria-label={reflectionLabel(currentField)}
+								onfocus={() => (inputFocused = true)}
+								onblur={() => (inputFocused = false)}
+								oninput={resizeQuizInput}
+							></textarea>
+						</div>
 					{/if}
-				</section>
 
-				<nav class="quiz-nav" aria-label={i18n.t('analysis.title')}>
-					<button
-						type="button"
-						class="quiz-arrow"
-						disabled={!canGoBack || saving}
-						aria-label={i18n.t('analysis.prev')}
-						onclick={() => void goBack()}
-					>
-						<svg viewBox="0 0 24 24" aria-hidden="true">
-							<path d="M15.41 16.59 10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41Z" />
-						</svg>
-					</button>
-
-					{#if isResonanceStep}
-						<AppButton
-							variant="primary"
-							disabled={saving}
-							onclick={() => void completeReflection()}
-						>
-							{#snippet children()}{i18n.t('analysis.saveReflection')}{/snippet}
-						</AppButton>
-					{:else}
+					<nav class="quiz-nav" aria-label={i18n.t('analysis.title')}>
 						<button
 							type="button"
 							class="quiz-arrow"
-							disabled={!canGoForward || saving}
-							aria-label={i18n.t('analysis.next')}
-							onclick={() => void goForward()}
+							disabled={!canGoBack || saving}
+							aria-label={i18n.t('analysis.prev')}
+							onclick={() => void goBack()}
 						>
 							<svg viewBox="0 0 24 24" aria-hidden="true">
-								<path d="M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41Z" />
+								<path d="M15.41 16.59 10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41Z" />
 							</svg>
 						</button>
-					{/if}
-				</nav>
+
+						{#if isResonanceStep}
+							<button
+								type="button"
+								class="quiz-arrow"
+								disabled={saving}
+								aria-label={i18n.t('analysis.saveReflection')}
+								onclick={() => void completeReflection()}
+							>
+								<svg viewBox="0 0 24 24" aria-hidden="true">
+									<path
+										d="M9.55 17.05 4.5 12l1.4-1.42 3.65 3.65 8.55-8.55 1.4 1.42-9.95 9.97Z"
+									/>
+								</svg>
+							</button>
+						{:else}
+							<button
+								type="button"
+								class="quiz-arrow"
+								disabled={!canGoForward || saving}
+								aria-label={i18n.t('analysis.next')}
+								onclick={() => void goForward()}
+							>
+								<svg viewBox="0 0 24 24" aria-hidden="true">
+									<path d="M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41Z" />
+								</svg>
+							</button>
+						{/if}
+					</nav>
+				</section>
+
+				<div class="reflection-gap" aria-hidden="true"></div>
 			</div>
 		{/if}
 	{/snippet}
 </AppFullscreen>
 
 <style>
+	.event-shell {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-2);
+		width: 100%;
+	}
+
+	.event-back {
+		align-self: flex-start;
+		margin: 0;
+		padding: 0;
+		border: none;
+		background: transparent;
+		font-family: var(--font-sans);
+		font-size: var(--text-sm);
+		font-weight: 400;
+		line-height: var(--leading-normal);
+		color: var(--text-muted);
+		cursor: pointer;
+		transition: color var(--transition-interactive);
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	.event-back:hover,
+	.event-back:focus-visible {
+		color: var(--text-soft);
+		outline: none;
+	}
+
 	.event-header {
-		position: relative;
-		min-height: 3.5rem;
-		padding-right: 2rem;
-		padding-bottom: 1.75rem;
+		width: 100%;
 	}
 
 	.event-header__title {
+		display: block;
+		width: 100%;
 		margin: 0;
-		padding-right: var(--space-2);
+		padding: 0;
+		border: none;
+		background: transparent;
+		text-align: left;
 		font-family: var(--font-serif);
 		font-size: var(--text-xl);
 		font-weight: 400;
 		line-height: var(--leading-tight);
 		color: var(--text);
+		cursor: text;
+		white-space: pre-wrap;
+		word-break: break-word;
+		-webkit-tap-highlight-color: transparent;
 	}
 
 	.event-header__input {
 		width: 100%;
-		min-height: 3.5rem;
 		margin: 0;
-		padding: var(--space-2) var(--space-3);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		background: var(--fill-subtle);
+		padding: 0;
+		overflow: hidden;
+		border: none;
+		border-radius: 0;
+		background: transparent;
 		color: var(--text);
 		font-family: var(--font-serif);
 		font-size: var(--text-xl);
 		line-height: var(--leading-tight);
-		resize: vertical;
+		resize: none;
+		min-height: 0;
 	}
 
 	.event-header__input:focus {
 		outline: none;
-		border-color: var(--accent-dim);
 	}
 
-	.event-header__edit {
-		position: absolute;
-		right: 0;
-		bottom: 0;
-		display: grid;
-		place-items: center;
-		width: 1.625rem;
-		height: 1.625rem;
-		padding: 0;
-		border: 1px solid var(--border);
-		border-radius: var(--radius-full);
-		background: var(--fill-subtle);
-		color: var(--text-faint);
-		cursor: pointer;
-		transition: var(--transition-interactive);
-		-webkit-tap-highlight-color: transparent;
+	.inline-edit-icon {
+		display: inline-block;
+		width: 1.125rem;
+		height: 1.125rem;
+		margin-inline-start: 0.25em;
+		vertical-align: -0.12em;
+		fill: currentColor;
+		color: var(--text-soft);
 	}
 
-	.event-header__edit:hover,
-	.event-header__edit.active {
-		border-color: var(--accent-dim);
+	.event-header__title .inline-edit-icon {
+		width: 1.375rem;
+		height: 1.375rem;
+		vertical-align: -0.14em;
 		color: var(--text);
 	}
 
-	.event-header__edit svg {
-		width: 0.875rem;
-		height: 0.875rem;
-		fill: currentColor;
+	.quiz-input-display .inline-edit-icon {
+		width: 1.25rem;
+		height: 1.25rem;
+		vertical-align: -0.14em;
+		color: var(--text);
 	}
 
 	.reflection {
-		display: flex;
-		flex-direction: column;
-		min-height: calc(100dvh - 12rem);
+		display: grid;
+		grid-template-rows: minmax(var(--space-3), 1fr) auto minmax(var(--space-3), 1fr);
+		flex: 1;
+		min-height: 0;
+		height: 100%;
 		max-width: var(--content-max-width);
 		margin: 0 auto;
+		width: 100%;
+	}
+
+	.reflection-gap {
+		min-height: 0;
 	}
 
 	.quiz-step {
-		flex: 1;
 		display: flex;
 		flex-direction: column;
-		justify-content: center;
-		gap: var(--space-5);
-		min-height: 0;
+		gap: var(--space-3);
+	}
+
+	.quiz-step--resonance {
+		gap: calc(var(--space-3) * 2);
+	}
+
+	.quiz-step--resonance .rf-resonance {
+		gap: calc(var(--space-4) * 2);
+	}
+
+	.quiz-step--resonance .quiz-nav {
+		margin-top: calc(var(--space-3) * 2);
 	}
 
 	.quiz-question {
@@ -350,34 +561,105 @@
 		color: var(--text);
 	}
 
-	.quiz-input {
+	.quiz-input-wrap {
+		position: relative;
 		width: 100%;
-		min-height: 10rem;
-		flex: 1;
-		resize: none;
-		font: inherit;
-		font-size: var(--text-base);
-		line-height: var(--leading-normal);
-		color: var(--text);
-		background: var(--fill-subtle);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		padding: var(--space-4);
 	}
 
-	.quiz-input:focus {
+	.quiz-input-display {
+		position: absolute;
+		inset: 0;
+		z-index: 1;
+		display: flex;
+		align-items: flex-start;
+		justify-content: flex-start;
+		width: 100%;
+		height: 100%;
+		margin: 0;
+		padding: 0;
+		border: none;
+		background: transparent;
+		text-align: left;
+		font-family: var(--font-sans);
+		font-size: 1rem;
+		font-weight: 300;
+		line-height: var(--leading-normal);
+		color: var(--text-soft);
+		cursor: text;
+		overflow: hidden;
+		white-space: pre-wrap;
+		word-break: break-word;
+		-webkit-tap-highlight-color: transparent;
+		-webkit-appearance: none;
+		appearance: none;
+	}
+
+	.quiz-input-display--placeholder {
+		color: var(--text-faint);
+	}
+
+	.quiz-input-placeholder {
+		position: absolute;
+		inset: 0;
+		pointer-events: none;
+		font-family: var(--font-sans);
+		font-size: 1rem;
+		font-weight: 300;
+		line-height: var(--leading-normal);
+		color: var(--text-faint);
+		white-space: pre-wrap;
+		word-break: break-word;
+	}
+
+	.quiz-input-placeholder .inline-edit-icon {
+		color: var(--text-soft);
+	}
+
+	.quiz-input {
+		width: 100%;
+		min-height: 0;
+		margin: 0;
+		padding: 0;
+		overflow: hidden;
+		resize: none;
+		font-family: var(--font-sans);
+		font-size: 1rem;
+		font-weight: 300;
+		line-height: var(--leading-normal);
+		color: var(--text-soft);
+		background: transparent;
+		background-image: none;
+		background-size: auto;
+		border: none;
+		border-radius: 0;
+		box-shadow: none;
+		-webkit-appearance: none;
+		appearance: none;
+	}
+
+	.quiz-input--hidden {
+		position: absolute;
+		inset: 0;
+		opacity: 0;
+		pointer-events: none;
+	}
+
+	.quiz-input::placeholder {
+		color: var(--text-faint);
+	}
+
+	.quiz-input:focus,
+	.quiz-input:focus-visible {
 		outline: none;
-		border-color: var(--accent-dim);
+		border: none;
+		box-shadow: none;
 	}
 
 	.quiz-nav {
-		flex-shrink: 0;
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		gap: var(--space-4);
-		padding-top: var(--space-5);
-		border-top: 1px solid var(--border);
 	}
 
 	.quiz-arrow {
