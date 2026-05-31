@@ -9,7 +9,8 @@
 	import { useI18n } from '$lib/i18n';
 	import { hapticLight } from '$lib/platform/native';
 	import { shouldSaveReflectionScore } from '$lib/events/reflection-status';
-	import { resizeQuizTextarea } from '$lib/utils/resize-quiz-textarea';
+	import { protocolFieldLabel } from '$lib/events/format';
+	import QuizTextField from '$lib/components/QuizTextField.svelte';
 
 	interface Props {
 		open: boolean;
@@ -36,8 +37,6 @@
 	let saving = $state(false);
 	let stepIndex = $state(0);
 	let loadedEntryId = $state<string | null>(null);
-	let quizInput = $state<HTMLTextAreaElement | null>(null);
-	let quizInputWrap = $state<HTMLDivElement | null>(null);
 	let eventInput = $state<HTMLTextAreaElement | null>(null);
 	let inputFocused = $state(false);
 
@@ -45,8 +44,6 @@
 	const totalSteps = protocolFields.length + 1;
 	const isResonanceStep = $derived(stepIndex === protocolFields.length);
 	const currentField = $derived(protocolFields[stepIndex] ?? protocolFields[0]);
-	const showInputDisplay = $derived(!inputFocused);
-	const showEmptyPlaceholder = $derived(!draft[currentField]?.trim());
 	const canGoBack = $derived(stepIndex > 0);
 	const canGoForward = $derived(stepIndex < totalSteps - 1);
 
@@ -81,26 +78,6 @@
 		}
 	});
 
-	async function focusQuizInput(): Promise<void> {
-		inputFocused = true;
-		await tick();
-		requestAnimationFrame(() => {
-			quizInput?.focus({ preventScroll: true });
-			resizeQuizInput();
-		});
-	}
-
-	function resizeQuizInput(): void {
-		const el = quizInput;
-		const wrap = quizInputWrap;
-		if (!el || !wrap) return;
-
-		resizeQuizTextarea(el, wrap, {
-			minLines: QUIZ_MIN_LINES,
-			bufferLines: QUIZ_BUFFER_LINES
-		});
-	}
-
 	function resizeEventInput(): void {
 		const el = eventInput;
 		if (!el) return;
@@ -124,19 +101,8 @@
 	}
 
 	function resizeViewport(): void {
-		resizeQuizInput();
 		resizeEventInput();
 	}
-
-	$effect(() => {
-		if (!open || isResonanceStep || !entry) return;
-		draft[currentField];
-		stepIndex;
-		showInputDisplay;
-		showEmptyPlaceholder;
-		inputFocused;
-		void tick().then(() => resizeQuizInput());
-	});
 
 	$effect(() => {
 		if (!open || !editingEvent) return;
@@ -147,20 +113,11 @@
 	$effect(() => {
 		if (!open || !entry || isResonanceStep) return;
 		stepIndex;
-
 		inputFocused = false;
-		void tick().then(() => quizInput?.blur());
 	});
 
 	function reflectionLabel(key: (typeof protocolFields)[number]): string {
-		const prefix = (entry?.score ?? 0) <= 0 ? 'negative' : 'positive';
-		const map: Record<(typeof protocolFields)[number], string> = {
-			reason: i18n.t(`analysis.${prefix}Reason`),
-			about: i18n.t(`analysis.${prefix}About`),
-			view: i18n.t(`analysis.${prefix}View`),
-			actions: i18n.t(`analysis.${prefix}Actions`)
-		};
-		return map[key];
+		return protocolFieldLabel(key, entry?.score ?? 0, (k) => i18n.t(k));
 	}
 
 	function buildEntry(finalize = false): EventEntry | null {
@@ -289,38 +246,15 @@
 							ariaLabel={i18n.t('analysis.resonanceQuestion')}
 						/>
 					{:else}
-						<div class="quiz-input-wrap" bind:this={quizInputWrap}>
-							{#if showInputDisplay}
-								<button
-									type="button"
-									class="quiz-input-display"
-									class:quiz-input-display--placeholder={showEmptyPlaceholder}
-									aria-label={i18n.t('analysis.edit')}
-									onclick={() => void focusQuizInput()}
-								>
-									{#if showEmptyPlaceholder}
-										{i18n.t('analysis.writePlaceholder')}{@render editIcon()}
-									{:else}
-										{draft[currentField]}{@render editIcon()}
-									{/if}
-								</button>
-							{:else if showEmptyPlaceholder}
-								<div class="quiz-input-placeholder" aria-hidden="true">
-									{i18n.t('analysis.writePlaceholder')}{@render editIcon()}
-								</div>
-							{/if}
-							<textarea
-								bind:this={quizInput}
-								class="quiz-input"
-								class:quiz-input--hidden={showInputDisplay}
-								bind:value={draft[currentField]}
-								rows="1"
-								aria-label={reflectionLabel(currentField)}
-								onfocus={() => (inputFocused = true)}
-								onblur={() => (inputFocused = false)}
-								oninput={resizeQuizInput}
-							></textarea>
-						</div>
+						<QuizTextField
+							bind:value={draft[currentField]}
+							bind:focused={inputFocused}
+							placeholder={i18n.t('analysis.writePlaceholder')}
+							ariaLabel={reflectionLabel(currentField)}
+							minLines={QUIZ_MIN_LINES}
+							bufferLines={QUIZ_BUFFER_LINES}
+							{editIcon}
+						/>
 					{/if}
 
 					<nav class="quiz-nav quiz-step__footer" aria-label={i18n.t('analysis.title')}>
@@ -453,13 +387,6 @@
 		color: var(--text);
 	}
 
-	.quiz-input-display :global(svg.inline-edit-icon) {
-		width: 1.25rem;
-		height: 1.25rem;
-		vertical-align: -0.14em;
-		color: var(--text);
-	}
-
 	.reflection {
 		display: grid;
 		grid-template-rows: minmax(var(--space-3), 1fr) auto minmax(var(--space-3), 1fr);
@@ -496,100 +423,6 @@
 		font-weight: 400;
 		line-height: var(--leading-tight);
 		color: var(--text);
-	}
-
-	.quiz-input-wrap {
-		position: relative;
-		width: 100%;
-	}
-
-	.quiz-input-display {
-		position: absolute;
-		inset: 0;
-		z-index: 1;
-		display: flex;
-		align-items: flex-start;
-		justify-content: flex-start;
-		width: 100%;
-		height: 100%;
-		margin: 0;
-		padding: 0;
-		border: none;
-		background: transparent;
-		text-align: left;
-		font-family: var(--font-sans);
-		font-size: 1rem;
-		font-weight: 300;
-		line-height: var(--leading-normal);
-		color: var(--text-soft);
-		cursor: text;
-		overflow: hidden;
-		white-space: pre-wrap;
-		word-break: break-word;
-		-webkit-tap-highlight-color: transparent;
-		-webkit-appearance: none;
-		appearance: none;
-	}
-
-	.quiz-input-display--placeholder {
-		color: var(--text-faint);
-	}
-
-	.quiz-input-placeholder {
-		position: absolute;
-		inset: 0;
-		pointer-events: none;
-		font-family: var(--font-sans);
-		font-size: 1rem;
-		font-weight: 300;
-		line-height: var(--leading-normal);
-		color: var(--text-faint);
-		white-space: pre-wrap;
-		word-break: break-word;
-	}
-
-	.quiz-input-placeholder :global(svg.inline-edit-icon) {
-		color: var(--text-soft);
-	}
-
-	.quiz-input {
-		width: 100%;
-		min-height: 0;
-		margin: 0;
-		padding: 0;
-		overflow: hidden;
-		resize: none;
-		font-family: var(--font-sans);
-		font-size: 1rem;
-		font-weight: 300;
-		line-height: var(--leading-normal);
-		color: var(--text-soft);
-		background: transparent;
-		background-image: none;
-		background-size: auto;
-		border: none;
-		border-radius: 0;
-		box-shadow: none;
-		-webkit-appearance: none;
-		appearance: none;
-	}
-
-	.quiz-input--hidden {
-		position: absolute;
-		inset: 0;
-		opacity: 0;
-		pointer-events: none;
-	}
-
-	.quiz-input::placeholder {
-		color: var(--text-faint);
-	}
-
-	.quiz-input:focus,
-	.quiz-input:focus-visible {
-		outline: none;
-		border: none;
-		box-shadow: none;
 	}
 
 	.quiz-nav {

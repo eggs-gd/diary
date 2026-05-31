@@ -2,6 +2,7 @@ import type { DayReflectionCalendarState } from './day-reflection';
 import type { Locale } from './types';
 import type { WeekStart } from '$lib/preferences/week-start';
 import { localDateKey } from './grouping';
+import { getLocaleDateFormat } from '$lib/i18n';
 
 export interface CalendarCell {
 	key: string;
@@ -79,7 +80,7 @@ export function buildMonthCells(
 }
 
 export function weekdayLabels(locale: Locale, weekStartsOn: WeekStart): string[] {
-	const resolved = locale === 'uk' ? 'uk-UA' : 'en-US';
+	const resolved = getLocaleDateFormat(locale);
 	const formatter = new Intl.DateTimeFormat(resolved, { weekday: 'short' });
 	// Jan 1 2023 was Sunday — anchor for weekStartsOn 0/1.
 	const start = new Date(2023, 0, 1 + weekStartsOn);
@@ -92,7 +93,7 @@ export function weekdayLabels(locale: Locale, weekStartsOn: WeekStart): string[]
 }
 
 export function monthLabel(year: number, month: number, locale: Locale): string {
-	const resolved = locale === 'uk' ? 'uk-UA' : 'en-US';
+	const resolved = getLocaleDateFormat(locale);
 	return new Date(year, month, 1).toLocaleDateString(resolved, {
 		month: 'long',
 		year: 'numeric'
@@ -162,7 +163,7 @@ export function iterMonthKeys(
 }
 
 export function monthSelectOptions(locale: Locale): { value: number; label: string }[] {
-	const resolved = locale === 'uk' ? 'uk-UA' : 'en-US';
+	const resolved = getLocaleDateFormat(locale);
 	const formatter = new Intl.DateTimeFormat(resolved, { month: 'long' });
 
 	return Array.from({ length: 12 }, (_, month) => ({

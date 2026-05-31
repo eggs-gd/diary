@@ -3,13 +3,15 @@
 	import { AppFullscreen } from '$lib/components/ui';
 	import EventKindSwitcher from '$lib/components/EventKindSwitcher.svelte';
 	import ScorePicker from '$lib/components/ScorePicker.svelte';
+	import QuizTextField from '$lib/components/QuizTextField.svelte';
 	import { AppIcon } from '$lib/icons';
 	import { normalizeEventKind, type EventKind } from '$lib/events/event-kind';
 	import type { EventEntry, ReflectionProtocol } from '$lib/events/types';
 	import { useI18n } from '$lib/i18n';
 	import { hapticLight } from '$lib/platform/native';
 	import { track } from '$lib/analytics';
-	import { resizeQuizTextarea } from '$lib/utils/resize-quiz-textarea';
+	import { protocolFieldLabel } from '$lib/events/format';
+	import { shouldSaveReflectionScore } from '$lib/events/reflection-status';
 
 	const protocolFields = ['reason', 'about', 'view', 'actions'] as const;
 	type ProtocolField = (typeof protocolFields)[number];
@@ -25,9 +27,6 @@
 
 	const i18n = useI18n();
 
-	const MIN_LINES = 2;
-	const BUFFER_LINES = 1;
-
 	let draft = $state<Pick<ReflectionProtocol, 'event' | 'reason' | 'about' | 'view' | 'actions'>>({
 		event: '',
 		reason: '',
@@ -40,7 +39,12 @@
 	let saving = $state(false);
 	let loadedSnapshot = $state<string | null>(null);
 	let editingEvent = $state(false);
-	let focusedField = $state<ProtocolField | null>(null);
+	let fieldFocused = $state<Record<ProtocolField, boolean>>({
+		reason: false,
+		about: false,
+		view: false,
+		actions: false
+	});
 
 	let baselineDraft = $state({
 		event: '',
@@ -53,8 +57,6 @@
 	let baselineEventKind = $state<EventKind>('event');
 
 	let eventInput = $state<HTMLTextAreaElement | null>(null);
-	let fieldInputs = $state<Partial<Record<ProtocolField, HTMLTextAreaElement>>>({});
-	let fieldWraps = $state<Partial<Record<ProtocolField, HTMLDivElement>>>({});
 
 	const hasChanges = $derived(
 		draft.event.trim() !== baselineDraft.event.trim() ||
@@ -92,7 +94,7 @@
 		eventKind = normalizeEventKind(source.kind);
 		baselineEventKind = eventKind;
 		editingEvent = false;
-		focusedField = null;
+		fieldFocused = { reason: false, about: false, view: false, actions: false };
 	}
 
 	$effect(() => {
@@ -109,21 +111,7 @@
 		if (open) return;
 		loadedSnapshot = null;
 		editingEvent = false;
-		focusedField = null;
-	});
-
-	$effect(() => {
-		if (!open || !entry) return;
-		draft.reason;
-		draft.about;
-		draft.view;
-		draft.actions;
-		focusedField;
-		void tick().then(() => {
-			for (const field of protocolFields) {
-				resizeField(field);
-			}
-		});
+		fieldFocused = { reason: false, about: false, view: false, actions: false };
 	});
 
 	$effect(() => {
@@ -133,22 +121,7 @@
 	});
 
 	function reflectionLabel(field: ProtocolField): string {
-		const prefix = (entry?.score ?? 0) <= 0 ? 'negative' : 'positive';
-		const map: Record<ProtocolField, string> = {
-			reason: i18n.t(`analysis.${prefix}Reason`),
-			about: i18n.t(`analysis.${prefix}About`),
-			view: i18n.t(`analysis.${prefix}View`),
-			actions: i18n.t(`analysis.${prefix}Actions`)
-		};
-		return map[field];
-	}
-
-	function resizeField(field: ProtocolField): void {
-		const el = fieldInputs[field] ?? null;
-		const wrap = fieldWraps[field] ?? null;
-		if (!el || !wrap) return;
-
-		resizeQuizTextarea(el, wrap, { minLines: MIN_LINES, bufferLines: BUFFER_LINES });
+		return protocolFieldLabel(field, entry?.score ?? 0, (k) => i18n.t(k));
 	}
 
 	function resizeEventInput(): void {
@@ -163,16 +136,6 @@
 		el.style.height = `${contentLines * lineHeight}px`;
 	}
 
-	async function focusField(field: ProtocolField): Promise<void> {
-		focusedField = field;
-		await tick();
-		requestAnimationFrame(() => {
-			fieldInputs[field]?.focus({ preventScroll: true });
-			resizeField(field);
-		});
-		void hapticLight();
-	}
-
 	async function focusEventInput(): Promise<void> {
 		editingEvent = true;
 		await tick();
@@ -183,12 +146,6 @@
 		void hapticLight();
 	}
 
-	function onFieldBlur(field: ProtocolField): void {
-		if (focusedField === field) {
-			focusedField = null;
-		}
-	}
-
 	function onEventBlur(): void {
 		editingEvent = false;
 	}
@@ -196,10 +153,12 @@
 	function buildEntry(): EventEntry | null {
 		if (!entry) return null;
 
-		const protocol: ReflectionProtocol = {
-			...draft,
-			reflectionScore
-		};
+		const protocol: ReflectionProtocol = { ...draft };
+		if (shouldSaveReflectionScore(entry, draft, reflectionScore)) {
+			protocol.reflectionScore = reflectionScore;
+		} else if (entry.protocol?.reflectionScore !== undefined) {
+			protocol.reflectionScore = entry.protocol.reflectionScore;
+		}
 
 		return {
 			...entry,
@@ -285,42 +244,15 @@
 		{#if entry}
 			<article class="reflection-report">
 				{#each protocolFields as field (field)}
-					{@const showDisplay = focusedField !== field}
-					{@const showPlaceholder = !draft[field].trim()}
 					<section class="report-section" aria-labelledby="report-{field}">
 						<h2 class="quiz-question" id="report-{field}">{reflectionLabel(field)}</h2>
-						<div class="quiz-input-wrap" bind:this={fieldWraps[field]}>
-							{#if showDisplay}
-								<button
-									type="button"
-									class="quiz-input-display"
-									class:quiz-input-display--placeholder={showPlaceholder}
-									aria-label={i18n.t('analysis.edit')}
-									onclick={() => void focusField(field)}
-								>
-									{#if showPlaceholder}
-										{i18n.t('analysis.writePlaceholder')}{@render editIcon()}
-									{:else}
-										{draft[field]}{@render editIcon()}
-									{/if}
-								</button>
-							{:else if showPlaceholder}
-								<div class="quiz-input-placeholder" aria-hidden="true">
-									{i18n.t('analysis.writePlaceholder')}{@render editIcon()}
-								</div>
-							{/if}
-							<textarea
-								bind:this={fieldInputs[field]}
-								class="quiz-input"
-								class:quiz-input--hidden={showDisplay}
-								bind:value={draft[field]}
-								rows="1"
-								aria-label={reflectionLabel(field)}
-								onfocus={() => (focusedField = field)}
-								onblur={() => onFieldBlur(field)}
-								oninput={() => resizeField(field)}
-							></textarea>
-						</div>
+						<QuizTextField
+							bind:value={draft[field]}
+							bind:focused={fieldFocused[field]}
+							placeholder={i18n.t('analysis.writePlaceholder')}
+							ariaLabel={reflectionLabel(field)}
+							{editIcon}
+						/>
 					</section>
 				{/each}
 
@@ -453,101 +385,6 @@
 		font-weight: 400;
 		line-height: var(--leading-tight);
 		color: var(--text);
-	}
-
-	:global(svg.inline-edit-icon) {
-		display: inline-block;
-		width: 1.25rem;
-		height: 1.25rem;
-		margin-inline-start: 0.25em;
-		vertical-align: -0.14em;
-		color: var(--text);
-	}
-
-	.quiz-input-wrap {
-		position: relative;
-		width: 100%;
-	}
-
-	.quiz-input-display {
-		position: absolute;
-		inset: 0;
-		z-index: 1;
-		display: flex;
-		align-items: flex-start;
-		justify-content: flex-start;
-		width: 100%;
-		height: 100%;
-		margin: 0;
-		padding: 0;
-		border: none;
-		background: transparent;
-		text-align: left;
-		font-family: var(--font-sans);
-		font-size: 1rem;
-		font-weight: 300;
-		line-height: var(--leading-normal);
-		color: var(--text-soft);
-		cursor: text;
-		overflow: hidden;
-		white-space: pre-wrap;
-		word-break: break-word;
-		-webkit-tap-highlight-color: transparent;
-		-webkit-appearance: none;
-		appearance: none;
-	}
-
-	.quiz-input-display--placeholder {
-		color: var(--text-faint);
-	}
-
-	.quiz-input-placeholder {
-		position: absolute;
-		inset: 0;
-		pointer-events: none;
-		font-family: var(--font-sans);
-		font-size: 1rem;
-		font-weight: 300;
-		line-height: var(--leading-normal);
-		color: var(--text-faint);
-		white-space: pre-wrap;
-		word-break: break-word;
-	}
-
-	.quiz-input-placeholder :global(svg.inline-edit-icon) {
-		color: var(--text-soft);
-	}
-
-	.quiz-input {
-		width: 100%;
-		min-height: 0;
-		margin: 0;
-		padding: 0;
-		overflow: hidden;
-		resize: none;
-		font-family: var(--font-sans);
-		font-size: 1rem;
-		font-weight: 300;
-		line-height: var(--leading-normal);
-		color: var(--text-soft);
-		background: transparent;
-		border: none;
-		border-radius: 0;
-		box-shadow: none;
-		-webkit-appearance: none;
-		appearance: none;
-	}
-
-	.quiz-input--hidden {
-		position: absolute;
-		inset: 0;
-		opacity: 0;
-		pointer-events: none;
-	}
-
-	.quiz-input:focus,
-	.quiz-input:focus-visible {
-		outline: none;
 	}
 
 	.report-footer {

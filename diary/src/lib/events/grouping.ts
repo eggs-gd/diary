@@ -1,8 +1,5 @@
 import type { EventEntry, Locale, YearGroup } from './types';
-
-function dateLocale(locale: Locale): string {
-	return locale === 'uk' ? 'uk-UA' : 'en-US';
-}
+import { getLocaleDateFormat } from '$lib/i18n';
 
 export function localDateKey(iso: string): string {
 	const d = new Date(iso);
@@ -17,7 +14,7 @@ export function formatDayLabel(dayKey: string, locale: Locale): string {
 	if (!match) return dayKey;
 
 	const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
-	return date.toLocaleDateString(dateLocale(locale), {
+	return date.toLocaleDateString(getLocaleDateFormat(locale), {
 		weekday: 'long',
 		day: 'numeric',
 		month: 'long'
@@ -40,7 +37,7 @@ export function groupEventEntries(entries: EventEntry[], locale: Locale): YearGr
 	const yearIndex = new Map<string, YearGroup>();
 	const monthIndex = new Map<string, YearGroup['months'][number]>();
 	const dayIndex = new Map<string, YearGroup['months'][number]['days'][number]>();
-	const resolvedLocale = dateLocale(locale);
+	const resolvedLocale = getLocaleDateFormat(locale);
 
 	for (const entry of entries) {
 		const date = new Date(entry.createdAt);

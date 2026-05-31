@@ -16,14 +16,15 @@
 		medianEventScore
 	} from '$lib/events/period-score';
 	import { DEFAULT_EVENT_KIND, normalizeEventKind, type EventKind } from '$lib/events/types';
-	import { getReflectionStatus, type ReflectionStatus } from '$lib/events/reflection-status';
+	import { getReflectionStatus } from '$lib/events/reflection-status';
 	import { dayReflectionDisplayIcon } from '$lib/events/reflection-display';
 	import {
 		getDayReflectionCalendarState,
 		type DayReflectionCalendarState
 	} from '$lib/events/day-reflection';
 	import type { EventEntry } from '$lib/events/types';
-	import { useI18n } from '$lib/i18n';
+	import { useI18n, getLocaleDateFormat } from '$lib/i18n';
+	import { reflectActionLabel } from '$lib/events/format';
 	import { useReflectionTone } from '$lib/preferences/reflection-tone.svelte';
 	import { hapticLight } from '$lib/platform/native';
 	import { initShareIntent } from '$lib/platform/share-intent';
@@ -78,14 +79,6 @@
 		return () => teardownShareIntent?.();
 	});
 
-	function reflectActionLabel(status: ReflectionStatus): string {
-		const map: Record<ReflectionStatus, string> = {
-			empty: i18n.t('archive.reflectEmpty'),
-			partial: i18n.t('archive.reflectPartial'),
-			complete: i18n.t('archive.reflectComplete')
-		};
-		return map[status];
-	}
 
 	function dayReflectionActionLabel(dayKey: string, state: DayReflectionCalendarState): string {
 		const dayLabel = formatDayLabel(dayKey, i18n.locale);
@@ -234,10 +227,10 @@
 													<ReflectEntryCard
 														{entry}
 														{reflectStatus}
-														actionLabel={reflectActionLabel(reflectStatus)}
+														actionLabel={reflectActionLabel(reflectStatus, (k) => i18n.t(k))}
 														kindLabel={eventKindLabel(normalizeEventKind(entry.kind))}
 														timeLabel={new Date(entry.createdAt).toLocaleTimeString(
-															i18n.locale === 'uk' ? 'uk-UA' : 'en-US',
+															getLocaleDateFormat(i18n.locale),
 															{ hour: '2-digit', minute: '2-digit' }
 														)}
 														onOpen={() => openAnalysis(entry)}

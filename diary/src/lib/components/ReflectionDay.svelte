@@ -12,12 +12,13 @@
 		hasDayReflectionChanges,
 		resolveDayScore
 	} from '$lib/events/day-reflection';
-	import { getReflectionStatus, type ReflectionStatus } from '$lib/events/reflection-status';
+	import { getReflectionStatus } from '$lib/events/reflection-status';
 	import type { DayReflection, EventEntry, EventKind } from '$lib/events/types';
 	import { useI18n } from '$lib/i18n';
 	import { hapticLight } from '$lib/platform/native';
 	import { track } from '$lib/analytics';
-	import { resizeQuizTextarea } from '$lib/utils/resize-quiz-textarea';
+	import { reflectActionLabel } from '$lib/events/format';
+	import QuizTextField from '$lib/components/QuizTextField.svelte';
 
 	interface EntryPreset {
 		kind: EventKind;
@@ -70,10 +71,6 @@
 
 	let nextActionsFocused = $state(false);
 	let insightsFocused = $state(false);
-	let nextActionsInput = $state<HTMLTextAreaElement | null>(null);
-	let insightsInput = $state<HTMLTextAreaElement | null>(null);
-	let nextActionsWrap = $state<HTMLDivElement | null>(null);
-	let insightsWrap = $state<HTMLDivElement | null>(null);
 
 	const dayLabel = $derived(label.trim() || i18n.t('archive.title'));
 	const classified = $derived(classifyDayEntries(entries));
@@ -98,10 +95,6 @@
 		)
 	);
 	const canSave = $derived(hasChanges && !saving);
-	const showNextActionsDisplay = $derived(!nextActionsFocused);
-	const showInsightsDisplay = $derived(!insightsFocused);
-	const showNextActionsPlaceholder = $derived(!nextActions.trim());
-	const showInsightsPlaceholder = $derived(!insights.trim());
 
 	const entryPresets = {
 		positiveEvents: { kind: 'event', score: 1 },
@@ -139,55 +132,40 @@
 		insightsFocused = false;
 	});
 
+	// Mark nextActions as edited when value changes while focused
 	$effect(() => {
-		if (!open) return;
+		if (!open || !nextActionsFocused) return;
 		nextActions;
-		showNextActionsDisplay;
-		showNextActionsPlaceholder;
-		nextActionsFocused;
-		void tick().then(() => resizeField(nextActionsInput, nextActionsWrap));
+		markNextActionsEdited();
+	});
+
+	// Mark insights as edited when value changes while focused
+	$effect(() => {
+		if (!open || !insightsFocused) return;
+		insights;
+		markInsightsEdited();
+	});
+
+	// Mark edited when focus leaves the field (blur detection via focused state)
+	$effect(() => {
+		if (!open) return;
+		if (!nextActionsFocused) {
+			// If we had focused and now lost focus, check if content changed
+			if (nextActions.trim() !== baselineNextActions.trim()) {
+				nextActionsEdited = true;
+			}
+		}
 	});
 
 	$effect(() => {
 		if (!open) return;
-		insights;
-		showInsightsDisplay;
-		showInsightsPlaceholder;
-		insightsFocused;
-		void tick().then(() => resizeField(insightsInput, insightsWrap));
+		if (!insightsFocused) {
+			if (insights.trim() !== baselineInsights.trim()) {
+				insightsEdited = true;
+			}
+		}
 	});
 
-	function resizeField(
-		el: HTMLTextAreaElement | null,
-		wrap: HTMLDivElement | null
-	): void {
-		if (!el || !wrap) return;
-
-		resizeQuizTextarea(el, wrap, { minLines: MIN_LINES, bufferLines: BUFFER_LINES });
-	}
-
-	async function focusField(
-		field: 'nextActions' | 'insights',
-		options: { haptic?: boolean } = {}
-	): Promise<void> {
-		if (field === 'nextActions') {
-			nextActionsFocused = true;
-		} else {
-			insightsFocused = true;
-		}
-
-		await tick();
-		requestAnimationFrame(() => {
-			const el = field === 'nextActions' ? nextActionsInput : insightsInput;
-			const wrap = field === 'nextActions' ? nextActionsWrap : insightsWrap;
-			el?.focus({ preventScroll: true });
-			resizeField(el, wrap);
-		});
-
-		if (options.haptic !== false) {
-			void hapticLight();
-		}
-	}
 
 	function buildReflection(): DayReflection {
 		const trimmedNextActions = nextActions.trim();
@@ -249,33 +227,12 @@
 		scoreEdited = true;
 	}
 
-	function onNextActionsBlur(): void {
-		if (nextActions.trim() !== baselineNextActions.trim()) {
-			nextActionsEdited = true;
-		}
-		nextActionsFocused = false;
-	}
-
-	function onInsightsBlur(): void {
-		if (insights.trim() !== baselineInsights.trim()) {
-			insightsEdited = true;
-		}
-		insightsFocused = false;
-	}
 
 	function addEntry(preset: EntryPreset): void {
 		onAddEntry(preset);
 		void hapticLight();
 	}
 
-	function reflectActionLabel(status: ReflectionStatus): string {
-		const map: Record<ReflectionStatus, string> = {
-			empty: i18n.t('archive.reflectEmpty'),
-			partial: i18n.t('archive.reflectPartial'),
-			complete: i18n.t('archive.reflectComplete')
-		};
-		return map[status];
-	}
 
 	function openEntry(entry: EventEntry): void {
 		onOpenEntry(entry);
@@ -328,7 +285,7 @@
 						{entry}
 						{reflectStatus}
 						variant="compact"
-						actionLabel={reflectActionLabel(reflectStatus)}
+						actionLabel={reflectActionLabel(reflectStatus, (k) => i18n.t(k))}
 						onOpen={() => openEntry(entry)}
 					/>
 				</li>
@@ -384,80 +341,24 @@
 
 			<section class="day-section" aria-labelledby="day-next-actions">
 				<h2 class="quiz-question" id="day-next-actions">{i18n.t('dayReflection.nextActions')}</h2>
-				<div class="quiz-input-wrap" bind:this={nextActionsWrap}>
-					{#if showNextActionsDisplay}
-						<button
-							type="button"
-							class="quiz-input-display"
-							class:quiz-input-display--placeholder={showNextActionsPlaceholder}
-							aria-label={i18n.t('analysis.edit')}
-							onclick={() => void focusField('nextActions')}
-						>
-							{#if showNextActionsPlaceholder}
-								{i18n.t('analysis.writePlaceholder')}{@render editIcon()}
-							{:else}
-								{nextActions}{@render editIcon()}
-							{/if}
-						</button>
-					{:else if showNextActionsPlaceholder}
-						<div class="quiz-input-placeholder" aria-hidden="true">
-							{i18n.t('analysis.writePlaceholder')}{@render editIcon()}
-						</div>
-					{/if}
-					<textarea
-						bind:this={nextActionsInput}
-						class="quiz-input"
-						class:quiz-input--hidden={showNextActionsDisplay}
-						bind:value={nextActions}
-						rows="1"
-						aria-label={i18n.t('dayReflection.nextActions')}
-						onfocus={() => (nextActionsFocused = true)}
-						onblur={onNextActionsBlur}
-						oninput={() => {
-							markNextActionsEdited();
-							resizeField(nextActionsInput, nextActionsWrap);
-						}}
-					></textarea>
-				</div>
+				<QuizTextField
+					bind:value={nextActions}
+					bind:focused={nextActionsFocused}
+					placeholder={i18n.t('analysis.writePlaceholder')}
+					ariaLabel={i18n.t('dayReflection.nextActions')}
+					{editIcon}
+				/>
 			</section>
 
 			<section class="day-section" aria-labelledby="day-insights">
 				<h2 class="quiz-question" id="day-insights">{i18n.t('dayReflection.insights')}</h2>
-				<div class="quiz-input-wrap" bind:this={insightsWrap}>
-					{#if showInsightsDisplay}
-						<button
-							type="button"
-							class="quiz-input-display"
-							class:quiz-input-display--placeholder={showInsightsPlaceholder}
-							aria-label={i18n.t('analysis.edit')}
-							onclick={() => void focusField('insights')}
-						>
-							{#if showInsightsPlaceholder}
-								{i18n.t('analysis.writePlaceholder')}{@render editIcon()}
-							{:else}
-								{insights}{@render editIcon()}
-							{/if}
-						</button>
-					{:else if showInsightsPlaceholder}
-						<div class="quiz-input-placeholder" aria-hidden="true">
-							{i18n.t('analysis.writePlaceholder')}{@render editIcon()}
-						</div>
-					{/if}
-					<textarea
-						bind:this={insightsInput}
-						class="quiz-input"
-						class:quiz-input--hidden={showInsightsDisplay}
-						bind:value={insights}
-						rows="1"
-						aria-label={i18n.t('dayReflection.insights')}
-						onfocus={() => (insightsFocused = true)}
-						onblur={onInsightsBlur}
-						oninput={() => {
-							markInsightsEdited();
-							resizeField(insightsInput, insightsWrap);
-						}}
-					></textarea>
-				</div>
+				<QuizTextField
+					bind:value={insights}
+					bind:focused={insightsFocused}
+					placeholder={i18n.t('analysis.writePlaceholder')}
+					ariaLabel={i18n.t('dayReflection.insights')}
+					{editIcon}
+				/>
 			</section>
 
 			<section class="day-section day-section--score" aria-labelledby="day-score">
@@ -638,101 +539,6 @@
 
 	.day-list__item:first-child :global(.reflect-entry) {
 		padding-top: 0;
-	}
-
-	:global(svg.inline-edit-icon) {
-		display: inline-block;
-		width: 1.25rem;
-		height: 1.25rem;
-		margin-inline-start: 0.25em;
-		vertical-align: -0.14em;
-		color: var(--text);
-	}
-
-	.quiz-input-wrap {
-		position: relative;
-		width: 100%;
-	}
-
-	.quiz-input-display {
-		position: absolute;
-		inset: 0;
-		z-index: 1;
-		display: flex;
-		align-items: flex-start;
-		justify-content: flex-start;
-		width: 100%;
-		height: 100%;
-		margin: 0;
-		padding: 0;
-		border: none;
-		background: transparent;
-		text-align: left;
-		font-family: var(--font-sans);
-		font-size: 1rem;
-		font-weight: 300;
-		line-height: var(--leading-normal);
-		color: var(--text-soft);
-		cursor: text;
-		overflow: hidden;
-		white-space: pre-wrap;
-		word-break: break-word;
-		-webkit-tap-highlight-color: transparent;
-		-webkit-appearance: none;
-		appearance: none;
-	}
-
-	.quiz-input-display--placeholder {
-		color: var(--text-faint);
-	}
-
-	.quiz-input-placeholder {
-		position: absolute;
-		inset: 0;
-		pointer-events: none;
-		font-family: var(--font-sans);
-		font-size: 1rem;
-		font-weight: 300;
-		line-height: var(--leading-normal);
-		color: var(--text-faint);
-		white-space: pre-wrap;
-		word-break: break-word;
-	}
-
-	.quiz-input-placeholder :global(svg.inline-edit-icon) {
-		color: var(--text-soft);
-	}
-
-	.quiz-input {
-		width: 100%;
-		min-height: 0;
-		margin: 0;
-		padding: 0;
-		overflow: hidden;
-		resize: none;
-		font-family: var(--font-sans);
-		font-size: 1rem;
-		font-weight: 300;
-		line-height: var(--leading-normal);
-		color: var(--text-soft);
-		background: transparent;
-		border: none;
-		border-radius: 0;
-		box-shadow: none;
-		-webkit-appearance: none;
-		appearance: none;
-	}
-
-	.quiz-input--hidden {
-		position: absolute;
-		inset: 0;
-		opacity: 0;
-		pointer-events: none;
-	}
-
-	.quiz-input:focus,
-	.quiz-input:focus-visible {
-		outline: none;
 	}
 
 	.day-footer {

@@ -3,12 +3,14 @@
 	import { AppFullscreen } from '$lib/components/ui';
 	import ScorePicker from '$lib/components/ScorePicker.svelte';
 	import EventKindSwitcher from '$lib/components/EventKindSwitcher.svelte';
+	import QuizTextField from '$lib/components/QuizTextField.svelte';
 	import { AppIcon } from '$lib/icons';
 	import type { EventEntry } from '$lib/events/types';
 	import { DEFAULT_EVENT_KIND, type EventKind } from '$lib/events/types';
 	import { useI18n } from '$lib/i18n';
 	import { hapticLight } from '$lib/platform/native';
 	import { track } from '$lib/analytics';
+	import { tone } from '$lib/events/format';
 
 	interface Props {
 		open: boolean;
@@ -40,19 +42,12 @@
 	let eventText = $state('');
 	let eventKind = $state<EventKind>(DEFAULT_EVENT_KIND);
 	let score = $state(0);
-	let eventInput = $state<HTMLTextAreaElement | null>(null);
-	let eventInputWrap = $state<HTMLDivElement | null>(null);
 	let inputFocused = $state(false);
 	let saving = $state(false);
 	let createdAtOverride = $state<string | null>(null);
+	let resizeTrigger = $state(0);
 
 	const canSave = $derived(eventText.trim().length > 0 && !saving);
-	const showInputDisplay = $derived(!inputFocused);
-	const showEmptyPlaceholder = $derived(!eventText.trim());
-
-	function tone(scoreValue: number): 'negative' | 'positive' {
-		return scoreValue <= 0 ? 'negative' : 'positive';
-	}
 
 	function resetForm(
 		text = '',
@@ -67,51 +62,15 @@
 		inputFocused = false;
 	}
 
-	function resizeInput(): void {
-		const el = eventInput;
-		const wrap = eventInputWrap;
-		if (!el || !wrap) return;
-
-		const hidden = el.classList.contains('quiz-input--hidden');
-		if (hidden) {
-			el.style.position = 'static';
-			el.style.opacity = '0';
-			el.style.pointerEvents = 'none';
-		}
-
-		el.style.height = 'auto';
-
-		const lineHeight = parseFloat(getComputedStyle(el).lineHeight);
-		if (!Number.isFinite(lineHeight) || lineHeight <= 0) return;
-
-		const contentLines = Math.max(1, Math.ceil(el.scrollHeight / lineHeight));
-		const totalLines = Math.max(MIN_LINES, contentLines + BUFFER_LINES);
-		const height = `${totalLines * lineHeight}px`;
-
-		wrap.style.minHeight = height;
-		el.style.height = height;
-
-		if (hidden) {
-			el.style.position = '';
-			el.style.opacity = '';
-			el.style.pointerEvents = '';
-		}
-	}
-
 	async function focusInput(options: { haptic?: boolean } = {}): Promise<void> {
 		inputFocused = true;
-		await tick();
-		requestAnimationFrame(() => {
-			eventInput?.focus({ preventScroll: true });
-			resizeInput();
-		});
 		if (options.haptic !== false) {
 			void hapticLight();
 		}
 	}
 
 	function resizeViewport(): void {
-		resizeInput();
+		queueMicrotask(() => { resizeTrigger += 1; });
 	}
 
 	async function persist(andAnother: boolean): Promise<void> {
@@ -158,19 +117,7 @@
 		);
 		void tick().then(() => {
 			void focusInput({ haptic: false });
-			requestAnimationFrame(() => {
-				eventInput?.focus({ preventScroll: true });
-			});
 		});
-	});
-
-	$effect(() => {
-		if (!open) return;
-		eventText;
-		showInputDisplay;
-		showEmptyPlaceholder;
-		inputFocused;
-		void tick().then(resizeInput);
 	});
 </script>
 
@@ -205,39 +152,16 @@
 			<section class="capture-step" aria-labelledby="capture-event-title">
 				<EventKindSwitcher bind:value={eventKind} />
 
-				<div class="quiz-input-wrap" bind:this={eventInputWrap}>
-					{#if showInputDisplay}
-						<button
-							type="button"
-							class="quiz-input-display"
-							class:quiz-input-display--placeholder={showEmptyPlaceholder}
-							aria-label={i18n.t('analysis.edit')}
-							onclick={() => void focusInput()}
-						>
-							{#if showEmptyPlaceholder}
-								{i18n.t('analysis.writePlaceholder')}{@render editIcon()}
-							{:else}
-								{eventText}{@render editIcon()}
-							{/if}
-						</button>
-					{:else if showEmptyPlaceholder}
-						<div class="quiz-input-placeholder" aria-hidden="true">
-							{i18n.t('analysis.writePlaceholder')}{@render editIcon()}
-						</div>
-					{/if}
-					<textarea
-						id="capture-event-text"
-						bind:this={eventInput}
-						class="quiz-input"
-						class:quiz-input--hidden={showInputDisplay}
-						bind:value={eventText}
-						rows={MIN_LINES}
-						aria-label={i18n.t('capture.event')}
-						onfocus={() => (inputFocused = true)}
-						onblur={() => (inputFocused = false)}
-						oninput={resizeInput}
-					></textarea>
-				</div>
+				<QuizTextField
+					bind:value={eventText}
+					bind:focused={inputFocused}
+					placeholder={i18n.t('analysis.writePlaceholder')}
+					ariaLabel={i18n.t('capture.event')}
+					minLines={MIN_LINES}
+					bufferLines={BUFFER_LINES}
+					{resizeTrigger}
+					{editIcon}
+				/>
 
 				<ScorePicker bind:value={score} ariaLabel={i18n.t('capture.resonance')} />
 
@@ -329,105 +253,6 @@
 
 	.capture-step :global(.kind-switcher) {
 		margin-bottom: var(--space-3);
-	}
-
-	:global(svg.inline-edit-icon) {
-		display: inline-block;
-		width: 1.25rem;
-		height: 1.25rem;
-		margin-inline-start: 0.25em;
-		vertical-align: -0.14em;
-		color: var(--text);
-	}
-
-	.quiz-input-wrap {
-		position: relative;
-		width: 100%;
-	}
-
-	.quiz-input-display {
-		position: absolute;
-		inset: 0;
-		z-index: 1;
-		display: flex;
-		align-items: flex-start;
-		justify-content: flex-start;
-		width: 100%;
-		height: 100%;
-		margin: 0;
-		padding: 0;
-		border: none;
-		background: transparent;
-		text-align: left;
-		font-family: var(--font-sans);
-		font-size: 1rem;
-		font-weight: 300;
-		line-height: var(--leading-normal);
-		color: var(--text-soft);
-		cursor: text;
-		overflow: hidden;
-		white-space: pre-wrap;
-		word-break: break-word;
-		-webkit-tap-highlight-color: transparent;
-		-webkit-appearance: none;
-		appearance: none;
-	}
-
-	.quiz-input-display--placeholder {
-		color: var(--text-faint);
-	}
-
-	.quiz-input-placeholder {
-		position: absolute;
-		inset: 0;
-		pointer-events: none;
-		font-family: var(--font-sans);
-		font-size: 1rem;
-		font-weight: 300;
-		line-height: var(--leading-normal);
-		color: var(--text-faint);
-		white-space: pre-wrap;
-		word-break: break-word;
-	}
-
-	.quiz-input-placeholder :global(svg.inline-edit-icon) {
-		color: var(--text-soft);
-	}
-
-	.quiz-input {
-		width: 100%;
-		min-height: 0;
-		margin: 0;
-		padding: 0;
-		overflow: hidden;
-		resize: none;
-		font-family: var(--font-sans);
-		font-size: 1rem;
-		font-weight: 300;
-		line-height: var(--leading-normal);
-		color: var(--text-soft);
-		background: transparent;
-		background-image: none;
-		background-size: auto;
-		border: none;
-		border-radius: 0;
-		box-shadow: none;
-		-webkit-appearance: none;
-		appearance: none;
-	}
-
-	.quiz-input--hidden {
-		position: absolute;
-		inset: 0;
-		opacity: 0;
-		pointer-events: none;
-	}
-
-	.quiz-input:focus,
-	.quiz-input:focus-visible {
-		outline: none;
-		border: none;
-		box-shadow: none;
 	}
 
 	.capture-step :global(.score-picker-wrap) {
