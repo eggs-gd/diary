@@ -74,11 +74,15 @@
 >
 	{#if header}
 		<header class="shell-header shell-header--custom">
-			{@render header()}
+			<div class="shell-header__inner">
+				{@render header()}
+			</div>
 		</header>
 	{:else if title}
 		<header class="shell-header">
-			<h1 id={titleId} class="shell-title">{title}</h1>
+			<div class="shell-header__inner">
+				<h1 id={titleId} class="shell-title">{title}</h1>
+			</div>
 		</header>
 	{/if}
 
@@ -136,10 +140,23 @@
 
 	.shell-header {
 		flex-shrink: 0;
+		min-width: 0;
+		overflow-x: clip;
 		padding: calc(var(--space-3) + env(safe-area-inset-top, 0px))
 			calc(var(--space-4) + env(safe-area-inset-right, 0px)) var(--space-2)
 			calc(var(--space-4) + env(safe-area-inset-left, 0px));
 		border-bottom: 1px solid var(--border);
+	}
+
+	.shell-header__inner {
+		width: 100%;
+		max-width: min(100%, var(--content-max-width));
+		margin-inline: auto;
+		min-width: 0;
+	}
+
+	.shell-header--custom .shell-header__inner {
+		font-size: clamp(14px, 1rem, 16px);
 	}
 
 	.shell-header--custom {

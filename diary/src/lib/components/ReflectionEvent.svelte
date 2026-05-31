@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import { AppFullscreen } from '$lib/components/ui';
+	import ScorePicker from '$lib/components/ScorePicker.svelte';
 	import type { EventEntry, ReflectionProtocol } from '$lib/events/types';
 	import { useI18n } from '$lib/i18n';
 	import { hapticLight } from '$lib/platform/native';
@@ -35,7 +36,6 @@
 	let eventInput = $state<HTMLTextAreaElement | null>(null);
 	let inputFocused = $state(false);
 
-	const reflectionRangeFill = $derived(getRangeFill(reflectionScore));
 	const protocolFields = ['reason', 'about', 'view', 'actions'] as const;
 	const totalSteps = protocolFields.length + 1;
 	const isResonanceStep = $derived(stepIndex === protocolFields.length);
@@ -166,19 +166,6 @@
 		void tick().then(() => quizInput?.blur());
 	});
 
-	function getRangeFill(value: number): string {
-		const marker = ((value + 10) / 20) * 100;
-		return `linear-gradient(90deg,
-			color-mix(in srgb, var(--accent-rose) 58%, transparent) 0%,
-			color-mix(in srgb, var(--accent) 42%, transparent) 50%,
-			color-mix(in srgb, var(--accent-leaf) 58%, transparent) 100%),
-			linear-gradient(90deg, transparent ${marker}%, color-mix(in srgb, var(--bg) 56%, transparent) ${marker}%)`;
-	}
-
-	function scoreLabel(value: number): string {
-		return value > 0 ? `+${value}` : String(value);
-	}
-
 	function reflectionLabel(key: (typeof protocolFields)[number]): string {
 		const prefix = (entry?.score ?? 0) <= 0 ? 'negative' : 'positive';
 		const map: Record<(typeof protocolFields)[number], string> = {
@@ -308,36 +295,16 @@
 			<div class="reflection">
 				<div class="reflection-gap" aria-hidden="true"></div>
 
-				<section class="quiz-step" class:quiz-step--resonance={isResonanceStep} aria-live="polite">
+				<section class="quiz-step" aria-live="polite">
 					<h2 class="quiz-question">
 						{isResonanceStep ? i18n.t('analysis.resonanceQuestion') : reflectionLabel(currentField)}
 					</h2>
 
 					{#if isResonanceStep}
-						<div class="rf-resonance">
-							<div class="rf-score-row">
-								<p
-									class="rf-score-value"
-									class:positive={reflectionScore > 0}
-									class:negative={reflectionScore <= 0}
-								>
-									{scoreLabel(reflectionScore)}
-								</p>
-							</div>
-							<input
-								type="range"
-								min="-10"
-								max="10"
-								step="1"
-								bind:value={reflectionScore}
-								style:--range-fill={reflectionRangeFill}
-							/>
-							<div class="scale-labels" aria-hidden="true">
-								<span>-10</span>
-								<span>0</span>
-								<span>+10</span>
-							</div>
-						</div>
+						<ScorePicker
+							bind:value={reflectionScore}
+							ariaLabel={i18n.t('analysis.resonanceQuestion')}
+						/>
 					{:else}
 						<div class="quiz-input-wrap" bind:this={quizInputWrap}>
 							{#if showInputDisplay}
@@ -373,7 +340,7 @@
 						</div>
 					{/if}
 
-					<nav class="quiz-nav" aria-label={i18n.t('analysis.title')}>
+					<nav class="quiz-nav quiz-step__footer" aria-label={i18n.t('analysis.title')}>
 						<button
 							type="button"
 							class="quiz-arrow"
@@ -395,7 +362,9 @@
 								onclick={() => void completeReflection()}
 							>
 								<svg viewBox="0 0 24 24" aria-hidden="true">
-									<path d="M9.55 17.05 4.5 12l1.4-1.42 3.65 3.65 8.55-8.55 1.4 1.42-9.95 9.97Z" />
+									<path
+										d="M9.55 17.05 4.5 12l1.4-1.42 3.65 3.65 8.55-8.55 1.4 1.42-9.95 9.97Z"
+									/>
 								</svg>
 							</button>
 						{:else}
@@ -535,23 +504,15 @@
 	.quiz-step {
 		display: flex;
 		flex-direction: column;
-		gap: var(--space-3);
 	}
 
-	.quiz-step--resonance {
-		gap: calc(var(--space-3) * 2);
-	}
-
-	.quiz-step--resonance .rf-resonance {
-		gap: calc(var(--space-4) * 2);
-	}
-
-	.quiz-step--resonance .quiz-nav {
-		margin-top: calc(var(--space-3) * 2);
+	.quiz-step__footer {
+		margin-top: var(--space-4);
+		flex-shrink: 0;
 	}
 
 	.quiz-question {
-		margin: 0;
+		margin: 0 0 var(--space-3);
 		font-family: var(--font-serif);
 		font-size: var(--text-2xl);
 		font-weight: 400;
@@ -690,37 +651,5 @@
 	.quiz-arrow:disabled {
 		opacity: 0.28;
 		cursor: not-allowed;
-	}
-
-	.rf-resonance {
-		display: grid;
-		gap: var(--space-4);
-	}
-
-	.rf-score-row {
-		display: flex;
-		justify-content: flex-end;
-	}
-
-	.rf-score-value {
-		font-family: var(--font-serif);
-		font-size: var(--text-2xl);
-		line-height: 1;
-		margin: 0;
-	}
-
-	.rf-score-value.positive {
-		color: var(--accent-leaf);
-	}
-
-	.rf-score-value.negative {
-		color: var(--accent-rose);
-	}
-
-	.scale-labels {
-		display: flex;
-		justify-content: space-between;
-		font-size: var(--text-xs);
-		color: var(--text-faint);
 	}
 </style>

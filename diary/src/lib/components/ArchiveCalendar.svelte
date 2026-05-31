@@ -368,10 +368,9 @@
 	.calendar-head {
 		display: flex;
 		flex-direction: column;
-		gap: var(--space-2);
+		gap: 0.5em;
 		width: 100%;
-		max-width: var(--content-max-width);
-		margin: 0 auto;
+		min-width: 0;
 	}
 
 	.calendar-back {
@@ -381,7 +380,7 @@
 		border: none;
 		background: transparent;
 		font-family: var(--font-sans);
-		font-size: var(--text-sm);
+		font-size: 0.75em;
 		font-weight: 400;
 		line-height: var(--leading-normal);
 		color: var(--text-muted);
@@ -410,39 +409,41 @@
 
 	.calendar-head-row {
 		display: flex;
+		flex-wrap: wrap;
 		align-items: stretch;
-		gap: var(--space-2);
+		gap: 0.5em;
 		width: 100%;
+		min-width: 0;
 	}
 
 	.calendar-head-pickers {
 		display: flex;
 		align-items: stretch;
-		flex: 1 1 auto;
+		flex: 1 1 12em;
 		max-width: 66.666%;
 		min-width: 0;
-		gap: var(--space-2);
+		gap: 0.5em;
 	}
 
 	.calendar-select {
 		appearance: none;
 		box-sizing: border-box;
-		height: var(--size-touch);
+		height: 2.25em;
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
 		background: var(--fill-subtle);
 		color: var(--text);
 		font-family: var(--font-serif);
-		font-size: var(--text-lg);
+		font-size: 1.125em;
 		font-weight: 400;
 		line-height: var(--leading-tight);
-		padding: 0 calc(var(--space-4) + 0.75rem) 0 var(--space-3);
+		padding: 0 calc(1em + 0.75rem) 0 0.75em;
 		cursor: pointer;
 		transition: var(--transition-interactive);
 		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%238a8275'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
 		background-repeat: no-repeat;
-		background-position: right 0.35rem center;
-		background-size: 1rem;
+		background-position: right 0.35em center;
+		background-size: 1em;
 		text-transform: capitalize;
 	}
 
@@ -452,26 +453,27 @@
 	}
 
 	.calendar-select--year {
-		flex: 0 0 auto;
-		width: 5.5rem;
+		flex: 0 1 auto;
+		width: 5.5em;
+		min-width: 0;
 		font-variant-numeric: tabular-nums;
 	}
 
 	.calendar-today-btn {
 		box-sizing: border-box;
-		height: var(--size-touch);
+		height: 2.25em;
 		margin-left: auto;
-		flex: 0 0 auto;
+		flex: 0 1 auto;
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		padding: 0 var(--space-3);
+		padding: 0 0.75em;
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
 		background: var(--fill-subtle);
 		color: var(--text-muted);
 		font-family: var(--font-sans);
-		font-size: var(--text-xs);
+		font-size: 0.65em;
 		font-weight: 500;
 		letter-spacing: var(--tracking-wide);
 		text-transform: uppercase;

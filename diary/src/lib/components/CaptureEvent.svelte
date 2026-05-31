@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import { AppFullscreen } from '$lib/components/ui';
+	import ScorePicker from '$lib/components/ScorePicker.svelte';
 	import type { EventEntry } from '$lib/events/types';
 	import { useI18n } from '$lib/i18n';
 	import { hapticLight } from '$lib/platform/native';
@@ -28,23 +29,9 @@
 	let inputFocused = $state(false);
 	let saving = $state(false);
 
-	const rangeFill = $derived(getRangeFill(score));
 	const canSave = $derived(eventText.trim().length > 0 && !saving);
 	const showInputDisplay = $derived(!inputFocused);
 	const showEmptyPlaceholder = $derived(!eventText.trim());
-
-	function getRangeFill(value: number): string {
-		const marker = ((value + 10) / 20) * 100;
-		return `linear-gradient(90deg,
-			color-mix(in srgb, var(--accent-rose) 58%, transparent) 0%,
-			color-mix(in srgb, var(--accent) 42%, transparent) 50%,
-			color-mix(in srgb, var(--accent-leaf) 58%, transparent) 100%),
-			linear-gradient(90deg, transparent ${marker}%, color-mix(in srgb, var(--bg) 56%, transparent) ${marker}%)`;
-	}
-
-	function scoreLabel(value: number): string {
-		return value > 0 ? `+${value}` : String(value);
-	}
 
 	function tone(scoreValue: number): 'negative' | 'positive' {
 		return scoreValue <= 0 ? 'negative' : 'positive';
@@ -224,29 +211,9 @@
 					></textarea>
 				</div>
 
-				<div class="capture-resonance">
-					<div class="rf-score-row">
-						<p class="rf-score-value" class:positive={score > 0} class:negative={score <= 0}>
-							{scoreLabel(score)}
-						</p>
-					</div>
-					<input
-						type="range"
-						min="-10"
-						max="10"
-						step="1"
-						aria-label={i18n.t('capture.resonance')}
-						bind:value={score}
-						style:--range-fill={rangeFill}
-					/>
-					<div class="scale-labels" aria-hidden="true">
-						<span>-10</span>
-						<span>0</span>
-						<span>+10</span>
-					</div>
-				</div>
+				<ScorePicker bind:value={score} ariaLabel={i18n.t('capture.resonance')} />
 
-				<nav class="capture-nav" aria-label={i18n.t('capture.newEvent')}>
+				<nav class="capture-nav capture-step__footer" aria-label={i18n.t('capture.newEvent')}>
 					<button
 						type="submit"
 						class="quiz-arrow"
@@ -334,7 +301,6 @@
 	.capture-step {
 		display: flex;
 		flex-direction: column;
-		gap: var(--space-3);
 	}
 
 	.inline-edit-icon {
@@ -437,36 +403,18 @@
 		box-shadow: none;
 	}
 
-	.capture-resonance {
-		display: grid;
-		gap: var(--space-4);
-	}
-
-	.rf-score-row {
+	.capture-step {
 		display: flex;
-		justify-content: flex-end;
+		flex-direction: column;
 	}
 
-	.rf-score-value {
-		margin: 0;
-		font-family: var(--font-serif);
-		font-size: var(--text-2xl);
-		line-height: 1;
+	.capture-step :global(.score-picker-wrap) {
+		margin-top: var(--space-3);
 	}
 
-	.rf-score-value.positive {
-		color: var(--accent-leaf);
-	}
-
-	.rf-score-value.negative {
-		color: var(--accent-rose);
-	}
-
-	.scale-labels {
-		display: flex;
-		justify-content: space-between;
-		font-size: var(--text-xs);
-		color: var(--text-faint);
+	.capture-step__footer {
+		margin-top: var(--space-4);
+		flex-shrink: 0;
 	}
 
 	.capture-nav {

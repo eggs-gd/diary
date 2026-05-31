@@ -272,6 +272,9 @@
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
+		flex-shrink: 0;
+		width: 1.875rem;
+		height: 1.875rem;
 		padding: 0;
 		border: none;
 		background: transparent;
@@ -282,8 +285,8 @@
 	}
 
 	.archive-icon-btn svg {
-		width: 1.25rem;
-		height: 1.25rem;
+		width: 1.375rem;
+		height: 1.375rem;
 		fill: currentColor;
 	}
 
@@ -414,7 +417,10 @@
 		flex-shrink: 0;
 		margin-left: auto;
 		align-items: center;
-		padding: var(--space-1) 0;
+		justify-content: center;
+		width: 1.875rem;
+		height: 1.875rem;
+		padding: 0;
 		border: none;
 		background: none;
 		color: var(--text-faint);
@@ -424,8 +430,8 @@
 	}
 
 	.reflect-action svg {
-		width: 1.125rem;
-		height: 1.125rem;
+		width: 1.375rem;
+		height: 1.375rem;
 		fill: currentColor;
 	}
 
