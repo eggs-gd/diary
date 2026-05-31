@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { AppButton } from '$lib/components/ui';
 	import ReflectionEvent from '$lib/components/ReflectionEvent.svelte';
+	import ArchiveCalendar from '$lib/components/ArchiveCalendar.svelte';
 	import ScoreDots from '$lib/components/ScoreDots.svelte';
 	import { groupEventEntries } from '$lib/events/grouping';
 	import { getReflectionStatus, type ReflectionStatus } from '$lib/events/reflection-status';
@@ -24,6 +25,7 @@
 
 	// Reflection state
 	let selectedEntry = $state<EventEntry | null>(null);
+	let calendarOpen = $state(false);
 
 	onMount(() => {
 		void eventStore.load();
@@ -82,6 +84,22 @@
 		track('analysis_opened', { score: entry.score });
 		void hapticLight();
 	}
+
+	function openCalendar(): void {
+		calendarOpen = true;
+		track('calendar_opened');
+		void hapticLight();
+	}
+
+	function jumpToDay(dayKey: string): void {
+		calendarOpen = false;
+		requestAnimationFrame(() => {
+			document.getElementById(`journal-day-${dayKey}`)?.scrollIntoView({
+				behavior: 'smooth',
+				block: 'start'
+			});
+		});
+	}
 </script>
 
 <main class="main">
@@ -129,7 +147,18 @@
 	<section class="archive" use:trackVisible={{ event: 'archive_viewed' }}>
 		<div class="archive-head">
 			<h2 class="archive-title">{i18n.t('archive.title')}</h2>
-			<span class="counter">{eventStore.entries.length}</span>
+			<button
+				type="button"
+				class="archive-calendar-btn"
+				aria-label={i18n.t('archive.openCalendar')}
+				onclick={openCalendar}
+			>
+				<svg viewBox="0 0 24 24" aria-hidden="true">
+					<path
+						d="M19 4h-1V2h-2v2H8V2H6v2H5a1.99 1.99 0 0 0-1.99 1.99V20A1.99 1.99 0 0 0 5 22h14c1.1 0 2-.9 2-2V6c0-1.2-.9-2-2-2Zm0 16H5V10h14v10ZM7 12h2v2H7v-2Zm4 0h2v2h-2v-2Zm4 0h2v2h-2v-2Zm-8 4h2v2H7v-2Zm4 0h2v2h-2v-2Zm4 0h2v2h-2v-2Z"
+					/>
+				</svg>
+			</button>
 		</div>
 
 		{#if eventStore.entries.length === 0}
@@ -205,6 +234,13 @@
 		{/if}
 	</section>
 </main>
+
+<ArchiveCalendar
+	open={calendarOpen}
+	entries={eventStore.entries}
+	onClose={() => (calendarOpen = false)}
+	onSelectDay={jumpToDay}
+/>
 
 <ReflectionEvent
 	open={selectedEntry !== null}
@@ -317,10 +353,29 @@
 		color: var(--text-muted);
 	}
 
-	.counter {
-		font-size: var(--text-sm);
-		color: var(--text-faint);
-		letter-spacing: var(--tracking-wide);
+	.archive-calendar-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0;
+		border: none;
+		background: transparent;
+		color: var(--text-muted);
+		cursor: pointer;
+		transition: color var(--transition-interactive);
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	.archive-calendar-btn svg {
+		width: 1.25rem;
+		height: 1.25rem;
+		fill: currentColor;
+	}
+
+	.archive-calendar-btn:hover,
+	.archive-calendar-btn:focus-visible {
+		color: var(--text-soft);
+		outline: none;
 	}
 
 	.empty {

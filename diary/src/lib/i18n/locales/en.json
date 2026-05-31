@@ -16,7 +16,12 @@
 		"empty": "Quiet for now. Your first events will appear after saving.",
 		"reflectEmpty": "Start reflection",
 		"reflectPartial": "Continue reflection",
-		"reflectComplete": "Update reflection"
+		"reflectComplete": "Update reflection",
+		"openCalendar": "Calendar",
+		"selectMonth": "Month",
+		"selectYear": "Year",
+		"today": "Today",
+		"dayEntries": "{day}: {count} entries"
 	},
 	"analysis": {
 		"title": "Event reflection",
@@ -53,5 +58,10 @@
 		"label": "Language",
 		"uk": "Українська",
 		"en": "English"
+	},
+	"weekStart": {
+		"label": "Week starts on",
+		"monday": "Mon",
+		"sunday": "Sun"
 	}
 }

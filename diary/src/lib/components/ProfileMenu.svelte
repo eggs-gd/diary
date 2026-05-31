@@ -5,6 +5,7 @@
 	import { track } from '$lib/analytics';
 	import ArchivePopup from './ArchivePopup.svelte';
 	import LocaleSwitcher from './LocaleSwitcher.svelte';
+	import WeekStartSwitcher from './WeekStartSwitcher.svelte';
 
 	const i18n = useI18n();
 	const entries = $derived(eventStore.entries);
@@ -54,6 +55,13 @@
 				<span id="profile-locale-heading">{i18n.t('locale.label')}</span>
 			</FieldLabel>
 			<LocaleSwitcher labelledBy="profile-locale-heading" />
+		</div>
+
+		<div class="locale-row">
+			<FieldLabel size="row">
+				<span id="profile-week-start-heading">{i18n.t('weekStart.label')}</span>
+			</FieldLabel>
+			<WeekStartSwitcher labelledBy="profile-week-start-heading" />
 		</div>
 
 		<AppButton variant="secondary" fullWidth onclick={openArchive}>

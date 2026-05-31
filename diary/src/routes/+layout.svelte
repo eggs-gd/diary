@@ -6,6 +6,7 @@
 	import ScrollToTop from '$lib/components/ScrollToTop.svelte';
 	import { track } from '$lib/analytics';
 	import { initI18n, useI18n } from '$lib/i18n';
+	import { initWeekStart } from '$lib/preferences';
 	import { initNativePlatform, teardownNativePlatform } from '$lib/platform/native';
 	import { applySystemTextZoom } from '$lib/platform/text-scale';
 
@@ -13,6 +14,7 @@
 
 	initI18n();
 	const i18n = useI18n();
+	initWeekStart();
 
 	onMount(() => {
 		track('app_open');

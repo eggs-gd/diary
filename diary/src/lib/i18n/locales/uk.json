@@ -16,7 +16,12 @@
 		"empty": "Поки тут тихо. Перші події з’являться після запису.",
 		"reflectEmpty": "Розпочати розбір",
 		"reflectPartial": "Продовжити розбір",
-		"reflectComplete": "Оновити розбір"
+		"reflectComplete": "Оновити розбір",
+		"openCalendar": "Календар",
+		"selectMonth": "Місяць",
+		"selectYear": "Рік",
+		"today": "Сьогодні",
+		"dayEntries": "{day}: {count} записів"
 	},
 	"analysis": {
 		"title": "Розбір події",
@@ -53,5 +58,10 @@
 		"label": "Мова",
 		"uk": "Українська",
 		"en": "English"
+	},
+	"weekStart": {
+		"label": "Початок тижня",
+		"monday": "Пн",
+		"sunday": "Нд"
 	}
 }
