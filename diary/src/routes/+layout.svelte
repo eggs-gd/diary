@@ -30,6 +30,8 @@
 	<link rel="icon" href={favicon} />
 	<title>{i18n.t('app.title')}</title>
 	<meta name="description" content={i18n.t('app.description')} />
+	<meta name="application-name" content={i18n.t('app.title')} />
+	<meta name="apple-mobile-web-app-title" content={i18n.t('app.title')} />
 </svelte:head>
 
 <div class="app">

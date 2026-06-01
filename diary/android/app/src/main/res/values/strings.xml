@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Щоденник усвідомленості</string>
-    <string name="title_activity_main">Щоденник усвідомленості</string>
+    <string name="app_name">Attention Journal</string>
+    <string name="title_activity_main">Attention Journal</string>
     <string name="package_name">gd.eggs.diary</string>
     <string name="custom_url_scheme">gd.eggs.diary</string>
 </resources>

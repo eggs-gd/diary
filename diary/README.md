@@ -1,4 +1,4 @@
-# Щоденник усвідомленості
+# Журнал уваги (Attention Journal)
 
 SvelteKit static app with Capacitor and Firebase Analytics.
 

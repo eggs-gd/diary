@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
 	appId: 'gd.eggs.diary',
-	appName: 'Щоденник усвідомленості',
+	appName: 'Attention Journal',
 	webDir: 'build',
 	ios: {
 		preferredContentMode: 'mobile'
