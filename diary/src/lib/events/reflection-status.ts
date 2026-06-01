@@ -6,6 +6,11 @@ const protocolFields = ['reason', 'about', 'view', 'actions'] as const;
 
 type ProtocolDraft = Pick<ReflectionProtocol, (typeof protocolFields)[number]>;
 
+export function protocolFilledCount(draft: ProtocolDraft | undefined): number {
+	if (!draft) return 0;
+	return protocolFields.filter((field) => draft[field]?.trim()).length;
+}
+
 export function areAllProtocolFieldsFilled(draft: ProtocolDraft): boolean {
 	return protocolFields.every((field) => draft[field]?.trim());
 }
@@ -24,7 +29,7 @@ export function getReflectionStatus(entry: EventEntry): ReflectionStatus {
 	const protocol = entry.protocol;
 	if (!protocol) return 'empty';
 
-	const filledCount = protocolFields.filter((field) => protocol[field]?.trim()).length;
+	const filledCount = protocolFilledCount(protocol);
 
 	if (filledCount === 0) {
 		return protocol.reflectionScore !== undefined ? 'partial' : 'empty';

@@ -8,10 +8,11 @@
 	import type { EventEntry, ReflectionProtocol } from '$lib/events/types';
 	import { useI18n } from '$lib/i18n';
 	import { hapticLight } from '$lib/platform/native';
-	import { shouldSaveReflectionScore } from '$lib/events/reflection-status';
+	import { protocolFilledCount, shouldSaveReflectionScore } from '$lib/events/reflection-status';
 	import { protocolFieldLabel } from '$lib/events/format';
 	import QuizTextField from '$lib/components/QuizTextField.svelte';
 	import { resizeTextareaToContent } from '$lib/utils/resize-quiz-textarea';
+	import { track } from '$lib/analytics';
 
 	interface Props {
 		open: boolean;
@@ -41,6 +42,7 @@
 	let eventInput = $state<HTMLTextAreaElement | null>(null);
 	let eventInputResizeFrame: number | null = null;
 	let inputFocused = $state(false);
+	let trackedStepKey = $state('');
 
 	const protocolFields = ['reason', 'about', 'view', 'actions'] as const;
 	const totalSteps = protocolFields.length + 1;
@@ -70,6 +72,7 @@
 		};
 		reflectionScore = p?.reflectionScore ?? entry.score;
 		eventKind = normalizeEventKind(entry.kind);
+		trackedStepKey = '';
 	});
 
 	$effect(() => {
@@ -77,7 +80,22 @@
 			editingEvent = false;
 			loadedEntryId = null;
 			inputFocused = false;
+			trackedStepKey = '';
 		}
+	});
+
+	$effect(() => {
+		if (!open || !entry) return;
+		const stepKey = `${entry.id}:${stepIndex}`;
+		if (stepKey === trackedStepKey) return;
+		trackedStepKey = stepKey;
+		track('reflection_quiz_step_viewed', {
+			step: stepIndex + 1,
+			totalSteps,
+			field: isResonanceStep ? 'resonance' : currentField,
+			score: entry.score,
+			filledFields: protocolFilledCount(draft)
+		});
 	});
 
 	function resizeEventInput(): void {
@@ -149,6 +167,13 @@
 		saving = true;
 		try {
 			await onPersist(updated);
+			track('reflection_quiz_draft_saved', {
+				step: stepIndex + 1,
+				totalSteps,
+				field: isResonanceStep ? 'resonance' : currentField,
+				filledFields: protocolFilledCount(updated.protocol),
+				hasReflectionScore: updated.protocol?.reflectionScore !== undefined
+			});
 		} finally {
 			saving = false;
 		}
@@ -157,6 +182,12 @@
 	async function goBack(): Promise<void> {
 		if (!canGoBack || saving) return;
 		await persistDraft();
+		track('reflection_quiz_step_changed', {
+			direction: 'back',
+			fromStep: stepIndex + 1,
+			toStep: stepIndex,
+			totalSteps
+		});
 		stepIndex -= 1;
 		void hapticLight();
 	}
@@ -164,6 +195,12 @@
 	async function goForward(): Promise<void> {
 		if (!canGoForward || saving) return;
 		await persistDraft();
+		track('reflection_quiz_step_changed', {
+			direction: 'forward',
+			fromStep: stepIndex + 1,
+			toStep: stepIndex + 2,
+			totalSteps
+		});
 		stepIndex += 1;
 		void hapticLight();
 	}
@@ -183,6 +220,11 @@
 		if (!updated || saving) return;
 		saving = true;
 		try {
+			track('reflection_quiz_completed', {
+				filledFields: protocolFilledCount(updated.protocol),
+				hasReflectionScore: updated.protocol?.reflectionScore !== undefined,
+				score: updated.protocol?.reflectionScore ?? updated.score
+			});
 			await onComplete(updated);
 			editingEvent = false;
 		} finally {

@@ -35,7 +35,10 @@
 	label={i18n.t('profile.open')}
 	expanded={profileOpen}
 	haspopup="dialog"
-	onclick={() => (profileOpen = true)}
+	onclick={() => {
+		profileOpen = true;
+		track('profile_opened');
+	}}
 >
 	{#snippet children()}
 		<AppIcon name="profile" />

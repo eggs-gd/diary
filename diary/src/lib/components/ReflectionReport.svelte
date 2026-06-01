@@ -11,7 +11,7 @@
 	import { hapticLight } from '$lib/platform/native';
 	import { track } from '$lib/analytics';
 	import { protocolFieldLabel } from '$lib/events/format';
-	import { shouldSaveReflectionScore } from '$lib/events/reflection-status';
+	import { getReflectionStatus, protocolFilledCount, shouldSaveReflectionScore } from '$lib/events/reflection-status';
 	import { resizeTextareaToContent } from '$lib/utils/resize-quiz-textarea';
 
 	const protocolFields = ['reason', 'about', 'view', 'actions'] as const;
@@ -20,11 +20,12 @@
 	interface Props {
 		open: boolean;
 		entry: EventEntry | null;
+		source?: string;
 		onClose: () => void;
 		onPersist: (entry: EventEntry) => Promise<void>;
 	}
 
-	let { open, entry, onClose, onPersist }: Props = $props();
+	let { open, entry, source = 'archive', onClose, onPersist }: Props = $props();
 
 	const i18n = useI18n();
 
@@ -194,7 +195,13 @@
 			baselineDraft = { ...draft };
 			baselineReflectionScore = reflectionScore;
 			baselineEventKind = eventKind;
-			track('reflection_report_saved', { score: reflectionScore });
+			track('reflection_report_saved', {
+				source,
+				status: getReflectionStatus(updated),
+				score: reflectionScore,
+				filledFields: protocolFilledCount(updated.protocol),
+				closeAfter
+			});
 			void hapticLight();
 			if (closeAfter) onClose();
 		} finally {

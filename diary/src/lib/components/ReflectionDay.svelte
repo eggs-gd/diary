@@ -31,6 +31,7 @@
 		label?: string;
 		entries?: EventEntry[];
 		saved?: DayReflection | null;
+		source?: string;
 		onClose: () => void;
 		onPersist: (reflection: DayReflection) => Promise<void>;
 		onAddEntry: (preset: EntryPreset) => void;
@@ -43,6 +44,7 @@
 		label = '',
 		entries = [],
 		saved = null,
+		source = 'archive',
 		onClose,
 		onPersist,
 		onAddEntry,
@@ -186,7 +188,15 @@
 			baselineNextActionsEdited = nextActionsEdited;
 			baselineInsightsEdited = insightsEdited;
 			baselineScoreEdited = scoreEdited;
-			track('day_reflection_saved', { day: dayKey });
+			track('day_reflection_saved', {
+				day: dayKey,
+				source,
+				entries: entries.length,
+				nextActionsEdited: reflection.nextActionsEdited === true,
+				insightsEdited: reflection.insightsEdited === true,
+				scoreEdited: reflection.scoreEdited === true,
+				closeAfter
+			});
 			void hapticLight();
 			if (closeAfter) onClose();
 		} finally {
@@ -214,13 +224,26 @@
 	}
 
 
-	function addEntry(preset: EntryPreset): void {
+	function addEntry(preset: EntryPreset, section: string): void {
+		track('day_reflection_add_entry_clicked', {
+			day: dayKey,
+			source,
+			section,
+			kind: preset.kind,
+			score: preset.score
+		});
 		onAddEntry(preset);
 		void hapticLight();
 	}
 
 
 	function openEntry(entry: EventEntry): void {
+		track('day_reflection_entry_opened', {
+			day: dayKey,
+			source,
+			score: entry.score,
+			kind: entry.kind
+		});
 		onOpenEntry(entry);
 		void hapticLight();
 	}
@@ -240,7 +263,7 @@
 	</div>
 {/snippet}
 
-{#snippet sectionHead(titleId: string, title: string, preset: EntryPreset)}
+{#snippet sectionHead(titleId: string, title: string, preset: EntryPreset, section: string)}
 	<div class="day-section__head">
 		<div class="day-section__title-wrap">
 			<span class="day-section__kind" aria-hidden="true">
@@ -252,7 +275,7 @@
 			type="button"
 			class="day-add"
 			aria-label={i18n.t('dayReflection.addEntry')}
-			onclick={() => addEntry(preset)}
+			onclick={() => addEntry(preset, section)}
 		>
 			<AppIcon name="add" />
 		</button>
@@ -293,7 +316,8 @@
 				{@render sectionHead(
 					'day-positive-events',
 					i18n.t('dayReflection.positiveEvents'),
-					entryPresets.positiveEvents
+					entryPresets.positiveEvents,
+					'positive_events'
 				)}
 				{@render entryList(classified.positiveEvents)}
 			</section>
@@ -302,7 +326,8 @@
 				{@render sectionHead(
 					'day-negative-events',
 					i18n.t('dayReflection.negativeEvents'),
-					entryPresets.negativeEvents
+					entryPresets.negativeEvents,
+					'negative_events'
 				)}
 				{@render entryList(classified.negativeEvents)}
 			</section>
@@ -311,7 +336,8 @@
 				{@render sectionHead(
 					'day-positive-acts',
 					i18n.t('dayReflection.positiveActs'),
-					entryPresets.positiveActs
+					entryPresets.positiveActs,
+					'positive_acts'
 				)}
 				{@render entryList(classified.positiveActs)}
 			</section>
@@ -320,7 +346,8 @@
 				{@render sectionHead(
 					'day-negative-acts',
 					i18n.t('dayReflection.negativeActs'),
-					entryPresets.negativeActs
+					entryPresets.negativeActs,
+					'negative_acts'
 				)}
 				{@render entryList(classified.negativeActs)}
 			</section>

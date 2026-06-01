@@ -21,6 +21,7 @@
 
 	const i18n = useI18n();
 	const weekStart = useWeekStart();
+	type EventReflectionSource = 'archive' | 'day_reflection';
 
 	const archiveView = $derived(
 		buildArchiveView(eventStore.entries, i18n.locale, dayReflectionStore.byDayKey)
@@ -31,8 +32,10 @@
 	let captureInitialKind = $state<EventKind | null>(null);
 	let captureInitialScore = $state(0);
 	let captureCreatedAt = $state<string | undefined>(undefined);
+	let captureSource = $state('main');
 	let captureFocusKey = $state(0);
 	let selectedEntry = $state<EventEntry | null>(null);
+	let selectedEntrySource = $state<EventReflectionSource>('archive');
 	let calendarOpen = $state(false);
 	let calendarResetView = $state(true);
 	let reflectionDayOpen = $state(false);
@@ -53,7 +56,7 @@
 		void dayReflectionStore.load();
 		let teardownShareIntent: (() => void) | null = null;
 		void initShareIntent((text) => {
-			openCapture(text);
+			openCapture(text, { source: 'share_sheet' });
 			track('share_text_received');
 		}).then((teardown) => {
 			teardownShareIntent = teardown;
@@ -64,25 +67,38 @@
 
 	function openCapture(
 		text = '',
-		options?: { dayKey?: string; kind?: EventKind; score?: number }
+		options?: { dayKey?: string; kind?: EventKind; score?: number; source?: string }
 	): void {
 		captureInitialText = text;
 		captureInitialKind = options?.kind ?? null;
 		captureInitialScore = options?.score ?? 0;
 		captureCreatedAt = options?.dayKey ? createdAtForDayKey(options.dayKey) : undefined;
+		captureSource = options?.source ?? 'main';
 		captureFocusKey += 1;
 		captureOpen = true;
-		track('capture_opened');
+		track('capture_opened', {
+			source: captureSource,
+			hasPrefill: text.trim().length > 0,
+			presetKind: options?.kind ?? 'none',
+			presetScore: options?.score ?? 0,
+			day: options?.dayKey ?? 'none'
+		});
 		void hapticLight();
+	}
+
+	function closeCapture(): void {
+		track('capture_closed', { source: captureSource });
+		captureOpen = false;
 	}
 
 	async function handleCaptureSave(entry: EventEntry): Promise<void> {
 		await eventStore.add(entry);
 	}
 
-	function openAnalysis(entry: EventEntry): void {
+	function openAnalysis(entry: EventEntry, source: EventReflectionSource = 'archive'): void {
 		selectedEntry = entry;
-		track('analysis_opened', { score: entry.score });
+		selectedEntrySource = source;
+		track('analysis_opened', { source, score: entry.score });
 		void hapticLight();
 	}
 
@@ -114,6 +130,18 @@
 			from: returnTo
 		});
 		void hapticLight();
+	}
+
+	function closeDayReflection(): void {
+		track('day_reflection_closed', {
+			day: reflectionDayKey,
+			source: reflectionDayReturnTo
+		});
+		reflectionDayOpen = false;
+		if (reflectionDayReturnTo === 'calendar') {
+			calendarResetView = false;
+			calendarOpen = true;
+		}
 	}
 </script>
 
@@ -154,7 +182,11 @@
 		{#if eventStore.entries.length === 0}
 			<p class="empty">{i18n.t('archive.empty')}</p>
 		{:else}
-			<ArchiveList {archiveView} onOpenDay={openDayReflection} onOpenEntry={openAnalysis} />
+			<ArchiveList
+				{archiveView}
+				onOpenDay={openDayReflection}
+				onOpenEntry={(entry) => openAnalysis(entry, 'archive')}
+			/>
 		{/if}
 	</section>
 </main>
@@ -165,8 +197,9 @@
 	initialKind={captureInitialKind}
 	initialScore={captureInitialScore}
 	initialCreatedAt={captureCreatedAt}
+	source={captureSource}
 	focusKey={captureFocusKey}
-	onClose={() => (captureOpen = false)}
+	onClose={closeCapture}
 	onSave={handleCaptureSave}
 />
 
@@ -185,13 +218,8 @@
 	label={reflectionDayLabel}
 	entries={reflectionDayEntries}
 	saved={dayReflectionStore.get(reflectionDayKey) ?? null}
-	onClose={() => {
-		reflectionDayOpen = false;
-		if (reflectionDayReturnTo === 'calendar') {
-			calendarResetView = false;
-			calendarOpen = true;
-		}
-	}}
+	source={reflectionDayReturnTo}
+	onClose={closeDayReflection}
 	onPersist={async (reflection) => {
 		await dayReflectionStore.save(reflection);
 	}}
@@ -199,13 +227,14 @@
 		openCapture('', {
 			dayKey: reflectionDayKey,
 			kind: preset.kind,
-			score: preset.score
+			score: preset.score,
+			source: 'day_reflection'
 		});
 	}}
-	onOpenEntry={openAnalysis}
+	onOpenEntry={(entry) => openAnalysis(entry, 'day_reflection')}
 />
 
-<EventReflection bind:entry={selectedEntry} />
+<EventReflection bind:entry={selectedEntry} source={selectedEntrySource} />
 
 <ArchiveExport
 	open={exportSettingsOpen}

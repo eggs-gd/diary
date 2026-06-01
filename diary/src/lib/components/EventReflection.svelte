@@ -2,16 +2,19 @@
 	import ReflectionEvent from '$lib/components/ReflectionEvent.svelte';
 	import ReflectionReport from '$lib/components/ReflectionReport.svelte';
 	import type { EventEntry } from '$lib/events/types';
-	import { getReflectionStatus } from '$lib/events/reflection-status';
+	import { getReflectionStatus, protocolFilledCount } from '$lib/events/reflection-status';
 	import { hapticLight } from '$lib/platform/native';
 	import { eventStore } from '$lib/state/events.svelte';
 	import { track } from '$lib/analytics';
 
+	type EventReflectionSource = 'archive' | 'day_reflection';
+
 	interface Props {
 		entry: EventEntry | null;
+		source?: EventReflectionSource;
 	}
 
-	let { entry = $bindable(null) }: Props = $props();
+	let { entry = $bindable(null), source = 'archive' }: Props = $props();
 
 	type ReflectionView = 'wizard' | 'report';
 
@@ -35,10 +38,25 @@
 		if (entry.id !== openedEntryId) {
 			openedEntryId = entry.id;
 			view = viewForEntry(entry);
+			track('reflection_opened', {
+				source,
+				mode: view,
+				status: getReflectionStatus(entry),
+				score: entry.score,
+				filledFields: protocolFilledCount(entry.protocol)
+			});
 		}
 	});
 
 	function dismiss(): void {
+		if (entry) {
+			track('reflection_closed', {
+				source,
+				mode: view,
+				status: getReflectionStatus(entry),
+				filledFields: protocolFilledCount(entry.protocol)
+			});
+		}
 		entry = null;
 	}
 
@@ -52,16 +70,25 @@
 
 		const status = getReflectionStatus(updated);
 		if (status === 'empty') {
+			track('reflection_quiz_saved', {
+				source,
+				status,
+				score: updated.protocol?.reflectionScore ?? updated.score,
+				filledFields: protocolFilledCount(updated.protocol),
+				complete: false
+			});
 			void hapticLight();
 			dismiss();
 			return;
 		}
 
-		if (status === 'complete') {
-			track('reflection_saved', {
-				score: updated.protocol?.reflectionScore ?? updated.score
-			});
-		}
+		track('reflection_quiz_saved', {
+			source,
+			status,
+			score: updated.protocol?.reflectionScore ?? updated.score,
+			filledFields: protocolFilledCount(updated.protocol),
+			complete: status === 'complete'
+		});
 
 		void hapticLight();
 		view = 'report';
@@ -79,6 +106,7 @@
 <ReflectionReport
 	open={reportOpen}
 	{entry}
+	{source}
 	onClose={dismiss}
 	onPersist={persist}
 />

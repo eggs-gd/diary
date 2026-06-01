@@ -18,6 +18,7 @@
 		initialKind?: EventKind | null;
 		initialScore?: number;
 		initialCreatedAt?: string;
+		source?: string;
 		focusKey?: number;
 		onClose: () => void;
 		onSave: (entry: EventEntry) => Promise<void>;
@@ -29,6 +30,7 @@
 		initialKind = null,
 		initialScore = 0,
 		initialCreatedAt,
+		source = 'main',
 		focusKey = 0,
 		onClose,
 		onSave
@@ -114,7 +116,13 @@
 		saving = true;
 		try {
 			await onSave(entry);
-			track('event_saved', { score: entry.score, tone: tone(entry.score), kind: entry.kind, andAnother });
+			track('event_saved', {
+				score: entry.score,
+				tone: tone(entry.score),
+				kind: entry.kind,
+				source,
+				andAnother
+			});
 			void hapticLight();
 
 			if (andAnother) {
