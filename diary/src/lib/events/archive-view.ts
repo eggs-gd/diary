@@ -1,4 +1,3 @@
-import type { ReflectionTone } from '$lib/preferences/reflection-tone';
 import { dayReflectionDisplayIcon } from './reflection-display';
 import { getDayReflectionCalendarState, type DayReflectionCalendarState } from './day-reflection';
 import { groupEventEntries } from './grouping';
@@ -31,8 +30,7 @@ export interface ArchiveYearView {
 export function buildArchiveView(
 	entries: EventEntry[],
 	locale: Locale,
-	dayReflections: Map<string, DayReflection>,
-	reflectionTone: ReflectionTone
+	dayReflections: Map<string, DayReflection>
 ): ArchiveYearView[] {
 	return groupEventEntries(entries, locale).map((year) => {
 		const yearEntries: EventEntry[] = [];
@@ -47,7 +45,7 @@ export function buildArchiveView(
 					...day,
 					score: medianEventScore(day.entries),
 					reflectionState,
-					reflectionIcon: dayReflectionDisplayIcon(reflectionTone, reflectionState)
+					reflectionIcon: dayReflectionDisplayIcon(reflectionState)
 				};
 			});
 

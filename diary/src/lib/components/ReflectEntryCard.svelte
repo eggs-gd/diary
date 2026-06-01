@@ -5,7 +5,6 @@
 	import { eventReflectionDisplayIcon } from '$lib/events/reflection-display';
 	import { normalizeEventKind, type EventEntry } from '$lib/events/types';
 	import type { ReflectionStatus } from '$lib/events/reflection-status';
-	import { useReflectionTone } from '$lib/preferences/reflection-tone.svelte';
 
 	interface Props {
 		entry: EventEntry;
@@ -29,11 +28,8 @@
 		onOpen
 	}: Props = $props();
 
-	const reflectionTone = useReflectionTone();
 	const entryKind = $derived(normalizeEventKind(entry.kind));
-	const displayIcon = $derived(
-		eventReflectionDisplayIcon(reflectionTone.preference, reflectStatus)
-	);
+	const displayIcon = $derived(eventReflectionDisplayIcon(reflectStatus));
 </script>
 
 <button

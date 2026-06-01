@@ -99,10 +99,5 @@
 		"label": "Week starts on",
 		"monday": "Mon",
 		"sunday": "Sun"
-	},
-	"reflectionTone": {
-		"label": "Reflection style",
-		"gentle": "Gentle",
-		"aggressive": "Aggressive"
 	}
 }

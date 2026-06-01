@@ -9,7 +9,6 @@
 	import ArchivePopup from './ArchivePopup.svelte';
 	import LocaleSwitcher from './LocaleSwitcher.svelte';
 	import WeekStartSwitcher from './WeekStartSwitcher.svelte';
-	import ReflectionToneSwitcher from './ReflectionToneSwitcher.svelte';
 
 	const i18n = useI18n();
 	const entries = $derived(eventStore.entries);
@@ -62,13 +61,6 @@
 				<span id="profile-week-start-heading">{i18n.t('weekStart.label')}</span>
 			</FieldLabel>
 			<WeekStartSwitcher labelledBy="profile-week-start-heading" />
-		</div>
-
-		<div class="locale-row">
-			<FieldLabel size="row">
-				<span id="profile-reflection-tone-heading">{i18n.t('reflectionTone.label')}</span>
-			</FieldLabel>
-			<ReflectionToneSwitcher labelledBy="profile-reflection-tone-heading" />
 		</div>
 
 		<AppButton variant="secondary" fullWidth onclick={openArchive}>

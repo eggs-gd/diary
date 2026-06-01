@@ -2,7 +2,6 @@ import {
 	dayReflectionActionIcon,
 	type DayReflectionCalendarState
 } from './day-reflection';
-import type { ReflectionTone } from '$lib/preferences/reflection-tone';
 import {
 	getReflectionStatus,
 	reflectStatusIcon,
@@ -10,25 +9,11 @@ import {
 	type ReflectionStatus
 } from './reflection-status';
 
-export function eventReflectionDisplayIcon(
-	tone: ReflectionTone,
-	status: ReflectionStatus
-): ReflectStatusIcon | null {
-	if (tone === 'gentle') {
-		return status === 'complete' ? 'reflectComplete' : null;
-	}
-
+export function eventReflectionDisplayIcon(status: ReflectionStatus): ReflectStatusIcon {
 	return reflectStatusIcon(status);
 }
 
-export function dayReflectionDisplayIcon(
-	tone: ReflectionTone,
-	state: DayReflectionCalendarState
-): ReflectStatusIcon | null {
-	if (tone === 'gentle') {
-		return state === 'complete' ? 'reflectComplete' : null;
-	}
-
+export function dayReflectionDisplayIcon(state: DayReflectionCalendarState): ReflectStatusIcon {
 	return dayReflectionActionIcon(state);
 }
 

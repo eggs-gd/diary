@@ -99,10 +99,5 @@
 		"label": "Початок тижня",
 		"monday": "Пн",
 		"sunday": "Нд"
-	},
-	"reflectionTone": {
-		"label": "Стиль рефлексії",
-		"gentle": "Gentle",
-		"aggressive": "Aggressive"
 	}
 }

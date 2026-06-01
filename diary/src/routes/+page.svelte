@@ -12,7 +12,6 @@
 	import { buildArchiveView } from '$lib/events/archive-view';
 	import type { EventEntry } from '$lib/events/types';
 	import { useI18n } from '$lib/i18n';
-	import { useReflectionTone } from '$lib/preferences/reflection-tone.svelte';
 	import { hapticLight } from '$lib/platform/native';
 	import { initShareIntent } from '$lib/platform/share-intent';
 	import { useWeekStart } from '$lib/preferences/week-start.svelte';
@@ -21,16 +20,10 @@
 	import { track, trackVisible } from '$lib/analytics';
 
 	const i18n = useI18n();
-	const reflectionTone = useReflectionTone();
 	const weekStart = useWeekStart();
 
 	const archiveView = $derived(
-		buildArchiveView(
-			eventStore.entries,
-			i18n.locale,
-			dayReflectionStore.byDayKey,
-			reflectionTone.preference
-		)
+		buildArchiveView(eventStore.entries, i18n.locale, dayReflectionStore.byDayKey)
 	);
 
 	let captureOpen = $state(false);
