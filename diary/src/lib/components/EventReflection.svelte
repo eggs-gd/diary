@@ -13,8 +13,34 @@
 
 	let { entry = $bindable(null) }: Props = $props();
 
-	const reportOpen = $derived(entry !== null && getReflectionStatus(entry) === 'complete');
-	const wizardOpen = $derived(entry !== null && getReflectionStatus(entry) !== 'complete');
+	type ReflectionView = 'wizard' | 'report';
+
+	let view = $state<ReflectionView>('wizard');
+	let openedEntryId = $state<string | null>(null);
+
+	const wizardOpen = $derived(entry !== null && view === 'wizard');
+	const reportOpen = $derived(entry !== null && view === 'report');
+
+	function viewForEntry(item: EventEntry): ReflectionView {
+		return getReflectionStatus(item) === 'empty' ? 'wizard' : 'report';
+	}
+
+	$effect(() => {
+		if (!entry) {
+			openedEntryId = null;
+			view = 'wizard';
+			return;
+		}
+
+		if (entry.id !== openedEntryId) {
+			openedEntryId = entry.id;
+			view = viewForEntry(entry);
+		}
+	});
+
+	function dismiss(): void {
+		entry = null;
+	}
 
 	async function persist(updated: EventEntry): Promise<void> {
 		await eventStore.update(updated);
@@ -22,19 +48,30 @@
 	}
 
 	async function complete(updated: EventEntry): Promise<void> {
-		await eventStore.update(updated);
-		track('reflection_saved', {
-			score: updated.protocol?.reflectionScore ?? updated.score
-		});
+		await persist(updated);
+
+		const status = getReflectionStatus(updated);
+		if (status === 'empty') {
+			void hapticLight();
+			dismiss();
+			return;
+		}
+
+		if (status === 'complete') {
+			track('reflection_saved', {
+				score: updated.protocol?.reflectionScore ?? updated.score
+			});
+		}
+
 		void hapticLight();
-		entry = null;
+		view = 'report';
 	}
 </script>
 
 <ReflectionEvent
 	open={wizardOpen}
 	{entry}
-	onClose={() => (entry = null)}
+	onClose={dismiss}
 	onPersist={persist}
 	onComplete={complete}
 />
@@ -42,6 +79,6 @@
 <ReflectionReport
 	open={reportOpen}
 	{entry}
-	onClose={() => (entry = null)}
+	onClose={dismiss}
 	onPersist={persist}
 />

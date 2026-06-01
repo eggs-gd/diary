@@ -69,7 +69,6 @@
 			reflectionScore !== baselineReflectionScore ||
 			eventKind !== baselineEventKind
 	);
-	const canSave = $derived(hasChanges && !saving);
 
 	function entrySnapshot(source: EventEntry): string {
 		return JSON.stringify({
@@ -179,7 +178,12 @@
 	}
 
 	async function persist(closeAfter = false): Promise<void> {
-		if (!hasChanges || saving) return;
+		if (saving) return;
+
+		if (!hasChanges) {
+			if (closeAfter) onClose();
+			return;
+		}
 
 		const updated = buildEntry();
 		if (!updated) return;
@@ -279,7 +283,7 @@
 					<button
 						type="button"
 						class="report-save"
-						disabled={!canSave}
+						disabled={saving}
 						aria-label={i18n.t('analysis.saveReflection')}
 						onclick={() => void persist(true)}
 					>
