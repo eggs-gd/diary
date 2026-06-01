@@ -1,9 +1,9 @@
 {
 	"app": {
-		"title": "觀明",
-		"description": "Архів уваги для подій, резонансу і майбутнього розбору.",
+		"title": "Журнал уваги",
+		"description": "Журнал уваги для подій, резонансу і майбутнього розбору.",
 		"scrollToTop": "Нагору",
-		"tagline": "архів уваги"
+		"tagline": "журнал уваги"
 	},
 	"capture": {
 		"newEvent": "Нова подія",
@@ -17,7 +17,7 @@
 		"saveAndAnother": "Зберегти і додати ще один"
 	},
 	"archive": {
-		"title": "Архів уваги",
+		"title": "Журнал уваги",
 		"empty": "Поки тут тихо. Перші події з’являться після запису.",
 		"reflectEmpty": "Розпочати розбір",
 		"reflectPartial": "Продовжити розбір",
@@ -36,7 +36,7 @@
 		"download": "Завантажити",
 		"copy": "Скопіювати",
 		"copied": "Скопійовано",
-		"exportSettingsTitle": "Експорт архіву",
+		"exportSettingsTitle": "Експорт журналу",
 		"exportRange": "Період",
 		"exportToday": "За сьогодні",
 		"exportWeek": "За поточний тиждень",
@@ -84,9 +84,9 @@
 	"profile": {
 		"open": "Профіль",
 		"title": "Профіль",
-		"clearArchive": "Очистити архів",
-		"archiveTitle": "Архів записів",
-		"archiveEmpty": "В архіві ще немає записів.",
+		"clearArchive": "Очистити журнал",
+		"archiveTitle": "Журнал записів",
+		"archiveEmpty": "В журналі ще немає записів.",
 		"selectAll": "Вибрати всі",
 		"deleteSelected": "Видалити вибрані ({count})"
 	},

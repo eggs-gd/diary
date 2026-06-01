@@ -22,7 +22,7 @@ final class ShareViewController: UIViewController {
         view.backgroundColor = UIColor(red: 0.055, green: 0.051, blue: 0.043, alpha: 1)
 
         logoLabel.translatesAutoresizingMaskIntoConstraints = false
-        logoLabel.text = "觀明"
+        logoLabel.text = "Attention Journal"
         logoLabel.textColor = UIColor(red: 0.77, green: 0.65, blue: 0.45, alpha: 0)
         logoLabel.font = UIFont.systemFont(ofSize: 32, weight: .light)
         logoLabel.textAlignment = .center

@@ -135,9 +135,9 @@ export function buildAgentPrompt(archive: string, locale: Locale): string {
 
 	return `Respond in language: ${language}
 
-You are analyzing a personal Attention Archive.
+You are analyzing a personal Attention Journal.
 
-The archive contains events, emotional ratings, reflections, and rating changes after reflection.
+The journal contains events, emotional ratings, reflections, and rating changes after reflection.
 
 Your goal is to identify patterns, not to provide therapy.
 
@@ -159,7 +159,7 @@ Do not:
 - praise or criticize the user;
 - invent causes that are not supported by the data.
 
-Work only with information explicitly present in the archive.
+Work only with information explicitly present in the journal.
 
 Output format (Markdown):
 
@@ -177,7 +177,7 @@ Short list with examples.
 
 # Observations
 
-3–10 concrete observations directly supported by the archive.
+3–10 concrete observations directly supported by the journal.
 
 # Events With The Largest Rating Changes
 
@@ -205,7 +205,7 @@ Do not answer the questions.
 
 5–10 concise bullet points.
 
-Archive:
+Journal:
 
 \`\`\`md
 ${archive}
@@ -215,7 +215,7 @@ ${archive}
 export function archiveFilename(): string {
 	const d = new Date();
 	const pad = (n: number) => String(n).padStart(2, '0');
-	return `guanming-${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}.md`;
+	return `attention-journal-${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}.md`;
 }
 
 function startOfToday(): Date {

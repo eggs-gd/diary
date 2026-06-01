@@ -1,9 +1,9 @@
 {
 	"app": {
-		"title": "觀明",
-		"description": "An attention archive for events, resonance, and later reflection.",
+		"title": "Attention Journal",
+		"description": "An attention journal for events, resonance, and later reflection.",
 		"scrollToTop": "Top",
-		"tagline": "attention archive"
+		"tagline": "attention journal"
 	},
 	"capture": {
 		"newEvent": "New event",
@@ -17,7 +17,7 @@
 		"saveAndAnother": "Save and add another"
 	},
 	"archive": {
-		"title": "Attention archive",
+		"title": "Attention Journal",
 		"empty": "Quiet for now. Your first events will appear after saving.",
 		"reflectEmpty": "Start reflection",
 		"reflectPartial": "Continue reflection",
@@ -36,7 +36,7 @@
 		"download": "Download",
 		"copy": "Copy",
 		"copied": "Copied",
-		"exportSettingsTitle": "Archive export",
+		"exportSettingsTitle": "Journal export",
 		"exportRange": "Period",
 		"exportToday": "Today",
 		"exportWeek": "Current week",
@@ -84,9 +84,9 @@
 	"profile": {
 		"open": "Profile",
 		"title": "Profile",
-		"clearArchive": "Clear archive",
-		"archiveTitle": "Entry archive",
-		"archiveEmpty": "There are no entries in the archive yet.",
+		"clearArchive": "Clear journal",
+		"archiveTitle": "Journal entries",
+		"archiveEmpty": "There are no entries in the journal yet.",
 		"selectAll": "Select all",
 		"deleteSelected": "Delete selected ({count})"
 	},

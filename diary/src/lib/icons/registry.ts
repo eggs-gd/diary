@@ -24,6 +24,24 @@ export type IconComponent = Component<{
 }>;
 
 /** Єдиний словник іконок застосунку — міняти набір тут, не по всьому коду. */
+export type IconName =
+	| 'add'
+	| 'calendar'
+	| 'check'
+	| 'chevronLeft'
+	| 'chevronRight'
+	| 'chevronUp'
+	| 'edit'
+	| 'kindAct'
+	| 'kindEvent'
+	| 'profile'
+	| 'refresh'
+	| 'reflectComplete'
+	| 'reflectEmpty'
+	| 'reflectPartial'
+	| 'scrollTop'
+	| 'share';
+
 export const ICONS = {
 	add: Plus,
 	calendar: Calendar,
@@ -41,6 +59,4 @@ export const ICONS = {
 	reflectPartial: NotebookPen,
 	scrollTop: ChevronUp,
 	share: Share2
-} as const satisfies Record<string, IconComponent>;
-
-export type IconName = keyof typeof ICONS;
+} as const satisfies Record<IconName, IconComponent>;

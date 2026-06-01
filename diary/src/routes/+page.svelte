@@ -118,10 +118,6 @@
 </script>
 
 <main class="main">
-	<header class="site-header" use:trackVisible={{ event: 'home_header_viewed' }}>
-		<h1 class="logo">觀明</h1>
-	</header>
-
 	<section class="archive" use:trackVisible={{ event: 'archive_viewed' }}>
 		<div class="archive-head">
 			<h2 class="archive-title">{i18n.t('archive.title')}</h2>
@@ -229,17 +225,6 @@
 			calc(var(--space-5) + env(safe-area-inset-right, 0px))
 			calc(var(--space-6) + env(safe-area-inset-bottom, 0px))
 			calc(var(--space-5) + env(safe-area-inset-left, 0px));
-	}
-
-	.site-header {
-		text-align: center;
-		margin-bottom: var(--space-5);
-	}
-
-	.logo {
-		font-size: var(--text-hero);
-		color: var(--accent);
-		letter-spacing: var(--tracking-hero);
 	}
 
 	.archive {
