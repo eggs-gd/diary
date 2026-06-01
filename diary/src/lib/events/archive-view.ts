@@ -1,7 +1,7 @@
 import { dayReflectionDisplayIcon } from './reflection-display';
 import { getDayReflectionCalendarState, type DayReflectionCalendarState } from './day-reflection';
 import { groupEventEntries } from './grouping';
-import { medianEventScore } from './period-score';
+import { averageScores, medianEventScore } from './period-score';
 import type { DayReflection, EventEntry, Locale } from './types';
 
 export interface ArchiveDayView {
@@ -33,17 +33,16 @@ export function buildArchiveView(
 	dayReflections: Map<string, DayReflection>
 ): ArchiveYearView[] {
 	return groupEventEntries(entries, locale).map((year) => {
-		const yearEntries: EventEntry[] = [];
+		const yearDayScores: number[] = [];
 		const months = year.months.map((month) => {
-			const monthEntries: EventEntry[] = [];
 			const days = month.days.map((day) => {
-				monthEntries.push(...day.entries);
-				yearEntries.push(...day.entries);
-
 				const reflectionState = getDayReflectionCalendarState(dayReflections.get(day.key));
+				const score = medianEventScore(day.entries);
+				if (score !== null) yearDayScores.push(score);
+
 				return {
 					...day,
-					score: medianEventScore(day.entries),
+					score,
 					reflectionState,
 					reflectionIcon: dayReflectionDisplayIcon(reflectionState)
 				};
@@ -53,7 +52,7 @@ export function buildArchiveView(
 				key: month.key,
 				label: month.label,
 				days,
-				score: medianEventScore(monthEntries)
+				score: averageScores(days.map((day) => day.score))
 			};
 		});
 
@@ -61,7 +60,7 @@ export function buildArchiveView(
 			key: year.key,
 			label: year.label,
 			months,
-			score: medianEventScore(yearEntries)
+			score: averageScores(yearDayScores)
 		};
 	});
 }

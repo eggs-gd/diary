@@ -99,5 +99,12 @@
 		"label": "Week starts on",
 		"monday": "Mon",
 		"sunday": "Sun"
+	},
+	"reflectionFeature": {
+		"label": "Mode",
+		"on": "Reflection mode",
+		"off": "Events mode",
+		"onShort": "Reflection",
+		"offShort": "Events"
 	}
 }

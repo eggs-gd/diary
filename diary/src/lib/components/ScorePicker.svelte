@@ -9,10 +9,11 @@
 	interface Props {
 		value?: number;
 		ariaLabel: string;
+		readonly?: boolean;
 		onUserChange?: () => void;
 	}
 
-	let { value = $bindable(0), ariaLabel, onUserChange }: Props = $props();
+	let { value = $bindable(0), ariaLabel, readonly = false, onUserChange }: Props = $props();
 
 	let track = $state<HTMLElement | null>(null);
 	let dragging = $state(false);
@@ -21,6 +22,7 @@
 	const valueLabel = $derived(pickerAriaLabel(value));
 
 	function setScoreFromClientX(clientX: number): void {
+		if (readonly) return;
 		if (!track) return;
 		const rect = track.getBoundingClientRect();
 		if (rect.width <= 0) return;
@@ -30,6 +32,7 @@
 	}
 
 	function onPointerDown(event: PointerEvent): void {
+		if (readonly) return;
 		if (event.pointerType === 'mouse' && event.button !== 0) return;
 		dragging = true;
 		track?.setPointerCapture(event.pointerId);
@@ -37,6 +40,7 @@
 	}
 
 	function onPointerMove(event: PointerEvent): void {
+		if (readonly) return;
 		if (!dragging) return;
 		setScoreFromClientX(event.clientX);
 	}
@@ -50,6 +54,7 @@
 	}
 
 	function selectDot(dotValue: number): void {
+		if (readonly) return;
 		value = clampScore(dotValue);
 		onUserChange?.();
 	}
@@ -59,8 +64,10 @@
 	<div
 		bind:this={track}
 		class="score-picker"
+		class:score-picker--readonly={readonly}
 		role="slider"
 		aria-label={ariaLabel}
+		aria-readonly={readonly}
 		aria-valuemin={-10}
 		aria-valuemax={10}
 		aria-valuenow={value}
@@ -71,6 +78,7 @@
 		onpointerup={onPointerUp}
 		onpointercancel={onPointerUp}
 		onkeydown={(event) => {
+			if (readonly) return;
 			if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') {
 				event.preventDefault();
 				value = clampScore(value - 1);
@@ -96,6 +104,7 @@
 				class:score-picker-dot--zero-bright={dot.kind === 'zero' && dot.tone === 'bright'}
 				aria-hidden="true"
 				tabindex="-1"
+				disabled={readonly}
 				onclick={(event) => {
 					event.stopPropagation();
 					selectDot(dot.value);
@@ -131,6 +140,11 @@
 		-webkit-tap-highlight-color: transparent;
 	}
 
+	.score-picker--readonly {
+		cursor: default;
+		touch-action: pan-y;
+	}
+
 	.score-picker:focus-visible {
 		outline: none;
 	}
@@ -145,6 +159,10 @@
 		border-radius: var(--radius-full);
 		pointer-events: auto;
 		transition: background var(--duration) var(--ease), transform var(--duration) var(--ease);
+	}
+
+	.score-picker-dot:disabled {
+		cursor: default;
 	}
 
 	.score-picker-dot--zero {

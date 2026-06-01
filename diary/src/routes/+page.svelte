@@ -14,6 +14,7 @@
 	import { useI18n } from '$lib/i18n';
 	import { hapticLight } from '$lib/platform/native';
 	import { initShareIntent } from '$lib/platform/share-intent';
+	import { useReflectionEnabled } from '$lib/preferences';
 	import { useWeekStart } from '$lib/preferences/week-start.svelte';
 	import { eventStore } from '$lib/state/events.svelte';
 	import { dayReflectionStore } from '$lib/state/day-reflections.svelte';
@@ -21,6 +22,8 @@
 
 	const i18n = useI18n();
 	const weekStart = useWeekStart();
+	const reflection = useReflectionEnabled();
+	const enableReflection = $derived(reflection.enabled);
 	type EventReflectionSource = 'archive' | 'day_reflection';
 
 	const archiveView = $derived(
@@ -53,7 +56,6 @@
 
 	onMount(() => {
 		void eventStore.load();
-		void dayReflectionStore.load();
 		let teardownShareIntent: (() => void) | null = null;
 		void initShareIntent((text) => {
 			openCapture(text, { source: 'share_sheet' });
@@ -62,6 +64,12 @@
 			teardownShareIntent = teardown;
 		});
 		return () => teardownShareIntent?.();
+	});
+
+	$effect(() => {
+		if (enableReflection && !dayReflectionStore.loaded) {
+			void dayReflectionStore.load();
+		}
 	});
 
 
@@ -150,7 +158,7 @@
 		<div class="archive-head">
 			<h2 class="archive-title">{i18n.t('archive.title')}</h2>
 			<div class="archive-actions">
-				{#if eventStore.entries.length > 0}
+				{#if enableReflection && eventStore.entries.length > 0}
 					<button
 						type="button"
 						class="archive-icon-btn"
@@ -184,6 +192,7 @@
 		{:else}
 			<ArchiveList
 				{archiveView}
+				{enableReflection}
 				onOpenDay={openDayReflection}
 				onOpenEntry={(entry) => openAnalysis(entry, 'archive')}
 			/>
@@ -206,7 +215,8 @@
 <ArchiveCalendar
 	open={calendarOpen}
 	entries={eventStore.entries}
-	dayReflections={dayReflections}
+	dayReflections={enableReflection ? dayReflections : []}
+	{enableReflection}
 	resetView={calendarResetView}
 	onClose={() => (calendarOpen = false)}
 	onSelectDay={(dayKey) => openDayReflection(dayKey, 'calendar')}
@@ -219,6 +229,7 @@
 	entries={reflectionDayEntries}
 	saved={dayReflectionStore.get(reflectionDayKey) ?? null}
 	source={reflectionDayReturnTo}
+	{enableReflection}
 	onClose={closeDayReflection}
 	onPersist={async (reflection) => {
 		await dayReflectionStore.save(reflection);
@@ -234,15 +245,17 @@
 	onOpenEntry={(entry) => openAnalysis(entry, 'day_reflection')}
 />
 
-<EventReflection bind:entry={selectedEntry} source={selectedEntrySource} />
+<EventReflection bind:entry={selectedEntry} source={selectedEntrySource} {enableReflection} />
 
-<ArchiveExport
-	open={exportSettingsOpen}
-	entries={eventStore.entries}
-	dayReflections={dayReflectionStore.byDayKey}
-	weekStart={weekStart.preference}
-	onClose={() => (exportSettingsOpen = false)}
-/>
+{#if enableReflection}
+	<ArchiveExport
+		open={exportSettingsOpen}
+		entries={eventStore.entries}
+		dayReflections={dayReflectionStore.byDayKey}
+		weekStart={weekStart.preference}
+		onClose={() => (exportSettingsOpen = false)}
+	/>
+{/if}
 
 <style>
 	.main {

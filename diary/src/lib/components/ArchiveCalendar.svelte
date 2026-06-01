@@ -31,6 +31,7 @@
 		open: boolean;
 		entries: EventEntry[];
 		dayReflections: DayReflection[];
+		enableReflection?: boolean;
 		resetView?: boolean;
 		onClose: () => void;
 		onSelectDay: (dayKey: string) => void;
@@ -40,6 +41,7 @@
 		open,
 		entries,
 		dayReflections,
+		enableReflection = true,
 		resetView = true,
 		onClose,
 		onSelectDay
@@ -242,12 +244,13 @@
 			countsByDay,
 			today,
 			resolvedWeekStart,
-			reflectionStateMap
+			enableReflection ? reflectionStateMap : new Map()
 		);
 	}
 
 	function dayAriaLabel(cell: CalendarCell): string {
 		if (cell.count === 0) return String(cell.day);
+		if (!enableReflection) return `${cell.day}: ${cell.count}`;
 		if (cell.reflectionStatus === 'complete') {
 			return i18n.t('archive.dayReflectionComplete', { day: cell.day, count: cell.count });
 		}
@@ -408,15 +411,17 @@
 										class="calendar-day"
 										class:calendar-day--today={cell.isToday}
 										class:calendar-day--has-entries={cell.count > 0}
-										class:calendar-day--reflection-complete={cell.reflectionStatus === 'complete'}
-										class:calendar-day--reflection-partial={cell.reflectionStatus === 'partial'}
-										class:calendar-day--reflection-not-started={cell.reflectionStatus === 'not_started'}
+										class:calendar-day--reflection-complete={enableReflection && cell.reflectionStatus === 'complete'}
+										class:calendar-day--reflection-partial={enableReflection && cell.reflectionStatus === 'partial'}
+										class:calendar-day--reflection-not-started={enableReflection && cell.reflectionStatus === 'not_started'}
 										disabled={cell.count === 0}
 										aria-label={dayAriaLabel(cell)}
 										onclick={() => selectDay(cell)}
 									>
 										<span class="calendar-day__num">{cell.day}</span>
-										{#if cell.reflectionStatus === 'complete'}
+										{#if !enableReflection && cell.count > 0}
+											<span class="calendar-day__mark" aria-hidden="true"></span>
+										{:else if cell.reflectionStatus === 'complete'}
 											<span class="calendar-day__check calendar-day__check--complete" aria-hidden="true">
 												<AppIcon name="check" />
 											</span>

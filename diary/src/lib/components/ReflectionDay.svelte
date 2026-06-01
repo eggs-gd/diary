@@ -32,6 +32,7 @@
 		entries?: EventEntry[];
 		saved?: DayReflection | null;
 		source?: string;
+		enableReflection?: boolean;
 		onClose: () => void;
 		onPersist: (reflection: DayReflection) => Promise<void>;
 		onAddEntry: (preset: EntryPreset) => void;
@@ -45,6 +46,7 @@
 		entries = [],
 		saved = null,
 		source = 'archive',
+		enableReflection = true,
 		onClose,
 		onPersist,
 		onAddEntry,
@@ -58,16 +60,12 @@
 
 	let nextActions = $state('');
 	let insights = $state('');
-	let dayScore = $state(0);
 	let baselineNextActions = $state('');
 	let baselineInsights = $state('');
-	let baselineScore = $state(0);
 	let baselineNextActionsEdited = $state(false);
 	let baselineInsightsEdited = $state(false);
-	let baselineScoreEdited = $state(false);
 	let nextActionsEdited = $state(false);
 	let insightsEdited = $state(false);
-	let scoreEdited = $state(false);
 	let saving = $state(false);
 	let loadedDayKey = $state<string | null>(null);
 
@@ -76,23 +74,20 @@
 
 	const dayLabel = $derived(label.trim() || i18n.t('archive.title'));
 	const classified = $derived(classifyDayEntries(entries));
+	const dayScore = $derived(resolveDayScore(entries));
 	const hasChanges = $derived(
 		hasDayReflectionChanges(
 			{
 				nextActions,
 				insights,
-				score: dayScore,
 				nextActionsEdited,
-				insightsEdited,
-				scoreEdited
+				insightsEdited
 			},
 			{
 				nextActions: baselineNextActions,
 				insights: baselineInsights,
-				score: baselineScore,
 				nextActionsEdited: baselineNextActionsEdited,
-				insightsEdited: baselineInsightsEdited,
-				scoreEdited: baselineScoreEdited
+				insightsEdited: baselineInsightsEdited
 			}
 		)
 	);
@@ -110,19 +105,14 @@
 
 		loadedDayKey = dayKey;
 		const source = saved ?? emptyDayReflection(dayKey);
-		const resolvedScore = resolveDayScore(saved, entries);
 		nextActions = source.nextActions;
 		insights = source.insights;
-		dayScore = resolvedScore;
 		baselineNextActions = source.nextActions;
 		baselineInsights = source.insights;
-		baselineScore = resolvedScore;
 		nextActionsEdited = source.nextActionsEdited === true;
 		insightsEdited = source.insightsEdited === true;
-		scoreEdited = source.scoreEdited === true;
 		baselineNextActionsEdited = nextActionsEdited;
 		baselineInsightsEdited = insightsEdited;
-		baselineScoreEdited = scoreEdited;
 		nextActionsFocused = false;
 		insightsFocused = false;
 	});
@@ -163,11 +153,9 @@
 			dayKey,
 			nextActions: trimmedNextActions,
 			insights: trimmedInsights,
-			score: dayScore,
 			nextActionsEdited:
 				nextActionsEdited || trimmedNextActions !== baselineNextActions.trim(),
 			insightsEdited: insightsEdited || trimmedInsights !== baselineInsights.trim(),
-			scoreEdited,
 			updatedAt: new Date().toISOString()
 		};
 	}
@@ -181,20 +169,17 @@
 			await onPersist(reflection);
 			baselineNextActions = reflection.nextActions;
 			baselineInsights = reflection.insights;
-			baselineScore = reflection.score ?? 0;
 			nextActionsEdited = reflection.nextActionsEdited ?? false;
 			insightsEdited = reflection.insightsEdited ?? false;
-			scoreEdited = reflection.scoreEdited ?? false;
 			baselineNextActionsEdited = nextActionsEdited;
 			baselineInsightsEdited = insightsEdited;
-			baselineScoreEdited = scoreEdited;
 			track('day_reflection_saved', {
 				day: dayKey,
 				source,
+				enableReflection,
 				entries: entries.length,
 				nextActionsEdited: reflection.nextActionsEdited === true,
 				insightsEdited: reflection.insightsEdited === true,
-				scoreEdited: reflection.scoreEdited === true,
 				closeAfter
 			});
 			void hapticLight();
@@ -218,11 +203,6 @@
 	function markInsightsEdited(): void {
 		insightsEdited = true;
 	}
-
-	function markScoreEdited(): void {
-		scoreEdited = true;
-	}
-
 
 	function addEntry(preset: EntryPreset, section: string): void {
 		track('day_reflection_add_entry_clicked', {
@@ -294,7 +274,8 @@
 						{entry}
 						{reflectStatus}
 						variant="compact"
-						actionLabel={reflectActionLabel(reflectStatus, (k) => i18n.t(k))}
+						actionLabel={enableReflection ? reflectActionLabel(reflectStatus, (k) => i18n.t(k)) : entry.text}
+						showReflection={enableReflection}
 						onOpen={() => openEntry(entry)}
 					/>
 				</li>
@@ -352,48 +333,52 @@
 				{@render entryList(classified.negativeActs)}
 			</section>
 
-			<section class="day-section" aria-labelledby="day-next-actions">
-				<h2 class="quiz-question" id="day-next-actions">{i18n.t('dayReflection.nextActions')}</h2>
-				<QuizTextField
-					bind:value={nextActions}
-					bind:focused={nextActionsFocused}
-					placeholder={i18n.t('analysis.writePlaceholder')}
-					ariaLabel={i18n.t('dayReflection.nextActions')}
-					{editIcon}
-				/>
-			</section>
+			{#if enableReflection}
+				<section class="day-section" aria-labelledby="day-next-actions">
+					<h2 class="quiz-question" id="day-next-actions">{i18n.t('dayReflection.nextActions')}</h2>
+					<QuizTextField
+						bind:value={nextActions}
+						bind:focused={nextActionsFocused}
+						placeholder={i18n.t('analysis.writePlaceholder')}
+						ariaLabel={i18n.t('dayReflection.nextActions')}
+						{editIcon}
+					/>
+				</section>
 
-			<section class="day-section" aria-labelledby="day-insights">
-				<h2 class="quiz-question" id="day-insights">{i18n.t('dayReflection.insights')}</h2>
-				<QuizTextField
-					bind:value={insights}
-					bind:focused={insightsFocused}
-					placeholder={i18n.t('analysis.writePlaceholder')}
-					ariaLabel={i18n.t('dayReflection.insights')}
-					{editIcon}
-				/>
-			</section>
+				<section class="day-section" aria-labelledby="day-insights">
+					<h2 class="quiz-question" id="day-insights">{i18n.t('dayReflection.insights')}</h2>
+					<QuizTextField
+						bind:value={insights}
+						bind:focused={insightsFocused}
+						placeholder={i18n.t('analysis.writePlaceholder')}
+						ariaLabel={i18n.t('dayReflection.insights')}
+						{editIcon}
+					/>
+				</section>
+			{/if}
 
 			<section class="day-section day-section--score" aria-labelledby="day-score">
 				<h2 class="quiz-question" id="day-score">{i18n.t('dayReflection.dayScore')}</h2>
 				<ScorePicker
-					bind:value={dayScore}
+					value={dayScore}
 					ariaLabel={i18n.t('dayReflection.dayScore')}
-					onUserChange={markScoreEdited}
+					readonly
 				/>
 			</section>
 
-			<footer class="day-footer">
-				<button
-					type="button"
-					class="day-save"
-					disabled={!canSave}
-					aria-label={i18n.t('dayReflection.save')}
-					onclick={() => void persist(true)}
-				>
-					<AppIcon name="check" />
-				</button>
-			</footer>
+			{#if enableReflection}
+				<footer class="day-footer">
+					<button
+						type="button"
+						class="day-save"
+						disabled={!canSave}
+						aria-label={i18n.t('dayReflection.save')}
+						onclick={() => void persist(true)}
+					>
+						<AppIcon name="check" />
+					</button>
+				</footer>
+			{/if}
 		</article>
 	{/snippet}
 </AppFullscreen>

@@ -99,5 +99,12 @@
 		"label": "Початок тижня",
 		"monday": "Пн",
 		"sunday": "Нд"
+	},
+	"reflectionFeature": {
+		"label": "Режим",
+		"on": "Режим розбору",
+		"off": "Режим подій",
+		"onShort": "Розбір",
+		"offShort": "Події"
 	}
 }

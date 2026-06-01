@@ -12,6 +12,7 @@
 		actionLabel: string;
 		variant?: 'archive' | 'compact';
 		showKind?: boolean;
+		showReflection?: boolean;
 		kindLabel?: string;
 		timeLabel?: string;
 		onOpen: () => void;
@@ -23,6 +24,7 @@
 		actionLabel,
 		variant = 'archive',
 		showKind = variant === 'archive',
+		showReflection = true,
 		kindLabel = '',
 		timeLabel = '',
 		onOpen
@@ -30,6 +32,8 @@
 
 	const entryKind = $derived(normalizeEventKind(entry.kind));
 	const displayIcon = $derived(eventReflectionDisplayIcon(reflectStatus));
+	const displayScore = $derived(showReflection ? entry.score : (entry.protocol?.reflectionScore ?? entry.score));
+	const reflectedScore = $derived(showReflection ? entry.protocol?.reflectionScore : undefined);
 </script>
 
 <button
@@ -54,9 +58,9 @@
 						<EventKindIcon kind={entryKind} />
 					</span>
 				{/if}
-				<ScoreDots original={entry.score} reflected={entry.protocol?.reflectionScore} />
+				<ScoreDots original={displayScore} reflected={reflectedScore} />
 			</div>
-			{#if displayIcon}
+			{#if showReflection && displayIcon}
 				<ReflectStatusIcon name={displayIcon} />
 			{/if}
 		</div>
@@ -65,11 +69,11 @@
 		<div class="reflect-entry__dots">
 			<ScoreDots
 				compact
-				original={entry.score}
-				reflected={entry.protocol?.reflectionScore}
+				original={displayScore}
+				reflected={reflectedScore}
 			/>
 		</div>
-		{#if displayIcon}
+		{#if showReflection && displayIcon}
 			<ReflectStatusIcon name={displayIcon} />
 		{/if}
 	{/if}

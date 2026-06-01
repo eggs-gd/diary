@@ -11,11 +11,12 @@
 
 	interface Props {
 		archiveView: ArchiveYearView[];
+		enableReflection?: boolean;
 		onOpenDay: (dayKey: string) => void;
 		onOpenEntry: (entry: EventEntry) => void;
 	}
 
-	let { archiveView, onOpenDay, onOpenEntry }: Props = $props();
+	let { archiveView, enableReflection = true, onOpenDay, onOpenEntry }: Props = $props();
 
 	const i18n = useI18n();
 
@@ -32,8 +33,18 @@
 		return map[state];
 	}
 
+	function dayActionLabel(dayLabel: string, count: number, state: DayReflectionCalendarState): string {
+		if (enableReflection) return dayReflectionActionLabel(dayLabel, count, state);
+		return `${dayLabel}: ${count}`;
+	}
+
 	function eventKindLabel(kind: EventKind): string {
 		return kind === 'act' ? i18n.t('capture.kindAct') : i18n.t('capture.kindEvent');
+	}
+
+	function entryActionLabel(entry: EventEntry, reflectStatus: ReturnType<typeof getReflectionStatus>): string {
+		if (!enableReflection) return entry.text;
+		return reflectActionLabel(reflectStatus, (k) => i18n.t(k));
 	}
 </script>
 
@@ -59,7 +70,7 @@
 							<button
 								type="button"
 								class="day-head-card"
-								aria-label={dayReflectionActionLabel(
+								aria-label={dayActionLabel(
 									day.label,
 									day.entries.length,
 									day.reflectionState
@@ -71,8 +82,10 @@
 									{#if day.score !== null}
 										<ScoreDots compact original={day.score} />
 									{/if}
-									{#if day.reflectionIcon}
+									{#if enableReflection && day.reflectionIcon}
 										<ReflectStatusIcon name={day.reflectionIcon} />
+									{:else if !enableReflection && day.entries.length > 0}
+										<ReflectStatusIcon name="reflectComplete" />
 									{/if}
 								</div>
 							</button>
@@ -83,7 +96,8 @@
 										<ReflectEntryCard
 											{entry}
 											{reflectStatus}
-											actionLabel={reflectActionLabel(reflectStatus, (k) => i18n.t(k))}
+											actionLabel={entryActionLabel(entry, reflectStatus)}
+											showReflection={enableReflection}
 											kindLabel={eventKindLabel(normalizeEventKind(entry.kind))}
 											timeLabel={new Date(entry.createdAt).toLocaleTimeString(
 												getLocaleDateFormat(i18n.locale),

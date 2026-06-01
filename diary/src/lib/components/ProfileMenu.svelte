@@ -8,6 +8,7 @@
 	import { track } from '$lib/analytics';
 	import ArchivePopup from './ArchivePopup.svelte';
 	import LocaleSwitcher from './LocaleSwitcher.svelte';
+	import ReflectionEnabledSwitcher from './ReflectionEnabledSwitcher.svelte';
 	import WeekStartSwitcher from './WeekStartSwitcher.svelte';
 
 	const i18n = useI18n();
@@ -64,6 +65,13 @@
 				<span id="profile-week-start-heading">{i18n.t('weekStart.label')}</span>
 			</FieldLabel>
 			<WeekStartSwitcher labelledBy="profile-week-start-heading" />
+		</div>
+
+		<div class="locale-row">
+			<FieldLabel size="row">
+				<span id="profile-reflection-feature-heading">{i18n.t('reflectionFeature.label')}</span>
+			</FieldLabel>
+			<ReflectionEnabledSwitcher labelledBy="profile-reflection-feature-heading" />
 		</div>
 
 		<AppButton variant="secondary" fullWidth onclick={openArchive}>

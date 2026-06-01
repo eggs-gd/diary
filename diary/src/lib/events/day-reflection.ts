@@ -8,11 +8,7 @@ export function effectiveEntryScore(entry: EventEntry): number {
 }
 
 export function isDayReflectionComplete(reflection: DayReflection): boolean {
-	return (
-		reflection.nextActions.trim().length > 0 &&
-		reflection.insights.trim().length > 0 &&
-		reflection.scoreEdited === true
-	);
+	return reflection.nextActions.trim().length > 0 && reflection.insights.trim().length > 0;
 }
 
 export type DayReflectionCalendarState = 'not_started' | 'partial' | 'complete';
@@ -24,11 +20,7 @@ export function dayReflectionActionIcon(state: DayReflectionCalendarState): Refl
 }
 
 export function hasUserEditedAnyReflectionField(reflection: DayReflection): boolean {
-	return (
-		reflection.nextActionsEdited === true ||
-		reflection.insightsEdited === true ||
-		reflection.scoreEdited === true
-	);
+	return reflection.nextActionsEdited === true || reflection.insightsEdited === true;
 }
 
 export function getDayReflectionCalendarState(
@@ -62,26 +54,19 @@ export function completedReflectionDayKeys(reflections: DayReflection[]): Set<st
 export interface DayReflectionDraft {
 	nextActions: string;
 	insights: string;
-	score?: number;
 	nextActionsEdited: boolean;
 	insightsEdited: boolean;
-	scoreEdited: boolean;
 }
 
 export function hasDayReflectionChanges(
 	current: DayReflectionDraft,
 	baseline: DayReflectionDraft
 ): boolean {
-	const currentScore = clampScore(current.score ?? 0);
-	const baselineScore = clampScore(baseline.score ?? 0);
-
 	return (
 		current.nextActions.trim() !== baseline.nextActions.trim() ||
 		current.insights.trim() !== baseline.insights.trim() ||
-		currentScore !== baselineScore ||
 		current.nextActionsEdited !== baseline.nextActionsEdited ||
-		current.insightsEdited !== baseline.insightsEdited ||
-		current.scoreEdited !== baseline.scoreEdited
+		current.insightsEdited !== baseline.insightsEdited
 	);
 }
 
@@ -115,22 +100,15 @@ export function classifyDayEntries(entries: EventEntry[]): ClassifiedDayEntries 
 export function defaultDayScoreFromEntries(entries: EventEntry[]): number {
 	if (entries.length === 0) return 0;
 
-	const scores = entries.map(effectiveEntryScore).sort((a, b) => a - b);
-	const mid = Math.floor(scores.length / 2);
-	const median =
-		scores.length % 2 === 0 ? (scores[mid - 1]! + scores[mid]!) / 2 : scores[mid]!;
+	const normalizedSum = entries.reduce((sum, entry) => {
+		const score = effectiveEntryScore(entry);
+		return sum + Math.sign(score) * Math.sqrt(Math.abs(score));
+	}, 0);
 
-	return clampScore(median);
+	return clampScore(normalizedSum);
 }
 
-export function resolveDayScore(
-	saved: DayReflection | null | undefined,
-	entries: EventEntry[]
-): number {
-	if (saved?.score !== undefined) {
-		return clampScore(saved.score);
-	}
-
+export function resolveDayScore(entries: EventEntry[]): number {
 	return defaultDayScoreFromEntries(entries);
 }
 

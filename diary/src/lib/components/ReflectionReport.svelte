@@ -21,11 +21,12 @@
 		open: boolean;
 		entry: EventEntry | null;
 		source?: string;
+		enableReflection?: boolean;
 		onClose: () => void;
 		onPersist: (entry: EventEntry) => Promise<void>;
 	}
 
-	let { open, entry, source = 'archive', onClose, onPersist }: Props = $props();
+	let { open, entry, source = 'archive', enableReflection = true, onClose, onPersist }: Props = $props();
 
 	const i18n = useI18n();
 
@@ -164,7 +165,7 @@
 		if (!entry) return null;
 
 		const protocol: ReflectionProtocol = { ...draft };
-		if (shouldSaveReflectionScore(entry, draft, reflectionScore)) {
+		if (!enableReflection || shouldSaveReflectionScore(entry, draft, reflectionScore)) {
 			protocol.reflectionScore = reflectionScore;
 		} else if (entry.protocol?.reflectionScore !== undefined) {
 			protocol.reflectionScore = entry.protocol.reflectionScore;
@@ -197,6 +198,7 @@
 			baselineEventKind = eventKind;
 			track('reflection_report_saved', {
 				source,
+				enableReflection,
 				status: getReflectionStatus(updated),
 				score: reflectionScore,
 				filledFields: protocolFilledCount(updated.protocol),
@@ -264,18 +266,20 @@
 	{#snippet children()}
 		{#if entry}
 			<article class="reflection-report">
-				{#each protocolFields as field (field)}
-					<section class="report-section" aria-labelledby="report-{field}">
-						<h2 class="quiz-question" id="report-{field}">{reflectionLabel(field)}</h2>
-						<QuizTextField
-							bind:value={draft[field]}
-							bind:focused={fieldFocused[field]}
-							placeholder={i18n.t('analysis.writePlaceholder')}
-							ariaLabel={reflectionLabel(field)}
-							{editIcon}
-						/>
-					</section>
-				{/each}
+				{#if enableReflection}
+					{#each protocolFields as field (field)}
+						<section class="report-section" aria-labelledby="report-{field}">
+							<h2 class="quiz-question" id="report-{field}">{reflectionLabel(field)}</h2>
+							<QuizTextField
+								bind:value={draft[field]}
+								bind:focused={fieldFocused[field]}
+								placeholder={i18n.t('analysis.writePlaceholder')}
+								ariaLabel={reflectionLabel(field)}
+								{editIcon}
+							/>
+						</section>
+					{/each}
+				{/if}
 
 				<section class="report-section report-section--score" aria-labelledby="report-resonance">
 					<h2 class="quiz-question" id="report-resonance">{i18n.t('analysis.resonanceQuestion')}</h2>

@@ -12,9 +12,10 @@
 	interface Props {
 		entry: EventEntry | null;
 		source?: EventReflectionSource;
+		enableReflection?: boolean;
 	}
 
-	let { entry = $bindable(null), source = 'archive' }: Props = $props();
+	let { entry = $bindable(null), source = 'archive', enableReflection = true }: Props = $props();
 
 	type ReflectionView = 'wizard' | 'report';
 
@@ -25,6 +26,7 @@
 	const reportOpen = $derived(entry !== null && view === 'report');
 
 	function viewForEntry(item: EventEntry): ReflectionView {
+		if (!enableReflection) return 'report';
 		return getReflectionStatus(item) === 'empty' ? 'wizard' : 'report';
 	}
 
@@ -35,6 +37,10 @@
 			return;
 		}
 
+		if (!enableReflection && view !== 'report') {
+			view = 'report';
+		}
+
 		if (entry.id !== openedEntryId) {
 			openedEntryId = entry.id;
 			view = viewForEntry(entry);
@@ -43,7 +49,8 @@
 				mode: view,
 				status: getReflectionStatus(entry),
 				score: entry.score,
-				filledFields: protocolFilledCount(entry.protocol)
+				filledFields: protocolFilledCount(entry.protocol),
+				enableReflection
 			});
 		}
 	});
@@ -54,7 +61,8 @@
 				source,
 				mode: view,
 				status: getReflectionStatus(entry),
-				filledFields: protocolFilledCount(entry.protocol)
+				filledFields: protocolFilledCount(entry.protocol),
+				enableReflection
 			});
 		}
 		entry = null;
@@ -107,6 +115,7 @@
 	open={reportOpen}
 	{entry}
 	{source}
+	{enableReflection}
 	onClose={dismiss}
 	onPersist={persist}
 />

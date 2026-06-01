@@ -1,5 +1,6 @@
 import type { DayReflection, EventEntry, Locale, ReflectionProtocol, YearGroup } from './types';
 import { getLocaleDateFormat } from '$lib/i18n';
+import { defaultDayScoreFromEntries } from './day-reflection';
 
 type Translator = (key: string, params?: Record<string, string | number>) => string;
 export type ExportRange = 'today' | 'week' | 'month';
@@ -61,11 +62,11 @@ function eventBlock(entry: EventEntry, t: Translator, dateLocale: string): strin
 
 // ─── Day reflection block ────────────────────────────────────────────────────
 
-function dayReflectionBlock(dr: DayReflection, t: Translator): string {
+function dayReflectionBlock(dr: DayReflection, entries: EventEntry[], t: Translator): string {
 	const rows = [
 		line(t('dayReflection.nextActions'), dr.nextActions),
 		line(t('dayReflection.insights'), dr.insights),
-		dr.score !== undefined ? `**${t('dayReflection.dayScore')}** ${sl(dr.score)}\n` : ''
+		`**${t('dayReflection.dayScore')}** ${sl(defaultDayScoreFromEntries(entries))}\n`
 	].filter(Boolean);
 
 	if (!rows.length) return '';
@@ -120,7 +121,7 @@ export function buildArchiveMarkdown(
 
 				const dr = dayReflections.get(day.key);
 				if (dr) {
-					const block = dayReflectionBlock(dr, t);
+					const block = dayReflectionBlock(dr, day.entries, t);
 					if (block) md += block + '\n';
 				}
 			}
