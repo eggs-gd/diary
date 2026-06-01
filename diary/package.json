@@ -13,10 +13,7 @@
 		"lint": "prettier --check .",
 		"format": "prettier --write .",
 		"assets:generate": "capacitor-assets generate --iconBackgroundColor '#0e0d0b' --splashBackgroundColor '#0e0d0b' --ios --android",
-		"version:set": "node scripts/sync-native-version.mjs",
-		"version:set:ios": "node scripts/sync-native-version.mjs ios",
-		"version:set:android": "node scripts/sync-native-version.mjs android",
-		"build:mobile": "yarn build && yarn version:set && cap sync",
+		"build:mobile": "yarn build && cap sync",
 		"ios": "npx cap open ios",
 		"android": "npx cap open android"
 	},
