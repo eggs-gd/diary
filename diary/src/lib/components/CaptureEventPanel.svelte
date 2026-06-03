@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { tick } from 'svelte';
-	import { AppFullscreen } from '$lib/components/ui';
+	import { ChromeRoundButton, PanelChromeBar } from '$lib/components/chrome';
+	import '$lib/components/chrome/chrome-layout.css';
+	import PanelShell from '$lib/components/navigation/PanelShell.svelte';
 	import ScorePicker from '$lib/components/ScorePicker.svelte';
 	import EventKindSwitcher from '$lib/components/EventKindSwitcher.svelte';
 	import QuizTextField from '$lib/components/QuizTextField.svelte';
@@ -13,26 +15,28 @@
 	import { tone } from '$lib/events/format';
 
 	interface Props {
-		open: boolean;
+		isTop: boolean;
+		visible: boolean;
 		initialText?: string;
 		initialKind?: EventKind | null;
 		initialScore?: number;
 		initialCreatedAt?: string;
 		source?: string;
 		focusKey?: number;
-		onClose: () => void;
+		onBack: () => void;
 		onSave: (entry: EventEntry) => Promise<void>;
 	}
 
 	let {
-		open,
+		isTop,
+		visible,
 		initialText = '',
 		initialKind = null,
 		initialScore = 0,
 		initialCreatedAt,
 		source = 'main',
 		focusKey = 0,
-		onClose,
+		onBack,
 		onSave
 	}: Props = $props();
 
@@ -129,7 +133,7 @@
 				resetForm('', initialKind, initialScore, createdAtOverride);
 				await focusInput({ haptic: false });
 			} else {
-				onClose();
+				onBack();
 			}
 		} finally {
 			saving = false;
@@ -137,7 +141,7 @@
 	}
 
 	$effect(() => {
-		if (!open) {
+		if (!isTop) {
 			validationAnimating = false;
 			if (validationTimer) {
 				clearTimeout(validationTimer);
@@ -162,27 +166,39 @@
 	<AppIcon name="edit" class="inline-edit-icon" />
 {/snippet}
 
-{#snippet header()}
-	<div class="event-shell">
-		<button type="button" class="event-back" onclick={onClose}>
-			{i18n.t('analysis.back')}
-		</button>
-
-		<h1 id="capture-event-title" class="capture-title">{i18n.t('capture.event')}</h1>
-	</div>
+{#snippet chrome()}
+	<PanelChromeBar {onBack}>
+		{#snippet trailing()}
+			<div class="chrome-actions">
+				<ChromeRoundButton
+					icon="check"
+					label={i18n.t('capture.save')}
+					disabled={!canSubmit}
+					onclick={() => void persist(false)}
+				/>
+				<ChromeRoundButton
+					icon="add"
+					label={i18n.t('capture.saveAndAnother')}
+					disabled={!canSubmit}
+					onclick={() => persist(true)}
+				/>
+			</div>
+		{/snippet}
+	</PanelChromeBar>
 {/snippet}
 
-<AppFullscreen
-	{open}
+<PanelShell
+	{isTop}
+	{visible}
 	bodyFill
 	keyboardAware
-	showClose={false}
 	onViewportChange={resizeViewport}
 	labelledBy="capture-event-title"
-	{onClose}
-	{header}
+	{chrome}
 >
 	{#snippet children()}
+		<h1 id="capture-event-title" class="capture-title">{i18n.t('capture.event')}</h1>
+
 		<form class="capture" onsubmit={(event) => (event.preventDefault(), void persist(false))}>
 			<div class="capture-gap" aria-hidden="true"></div>
 
@@ -208,65 +224,16 @@
 					<ScorePicker bind:value={score} ariaLabel={i18n.t('capture.resonance')} />
 				</div>
 
-				<nav class="capture-nav capture-step__footer" aria-label={i18n.t('capture.newEvent')}>
-					<button
-						type="submit"
-						class="quiz-arrow"
-						disabled={!canSubmit}
-						aria-label={i18n.t('capture.save')}
-					>
-						<AppIcon name="check" />
-					</button>
-
-					<button
-						type="button"
-						class="quiz-arrow"
-						disabled={!canSubmit}
-						aria-label={i18n.t('capture.saveAndAnother')}
-						onclick={() => persist(true)}
-					>
-						<AppIcon name="add" />
-					</button>
-				</nav>
 			</section>
 
 			<div class="capture-gap" aria-hidden="true"></div>
 		</form>
 	{/snippet}
-</AppFullscreen>
+</PanelShell>
 
 <style>
-	.event-shell {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-2);
-		width: 100%;
-	}
-
-	.event-back {
-		align-self: flex-start;
-		margin: 0;
-		padding: 0;
-		border: none;
-		background: transparent;
-		font-family: var(--font-sans);
-		font-size: var(--text-sm);
-		font-weight: 400;
-		line-height: var(--leading-normal);
-		color: var(--text-muted);
-		cursor: pointer;
-		transition: color var(--transition-interactive);
-		-webkit-tap-highlight-color: transparent;
-	}
-
-	.event-back:hover,
-	.event-back:focus-visible {
-		color: var(--text-soft);
-		outline: none;
-	}
-
 	.capture-title {
-		margin: 0;
+		margin: 0 0 var(--space-4);
 		font-family: var(--font-serif);
 		font-size: var(--text-xl);
 		font-weight: 400;
@@ -357,46 +324,4 @@
 		}
 	}
 
-	.capture-step__footer {
-		margin-top: var(--space-4);
-		flex-shrink: 0;
-	}
-
-	.capture-nav {
-		display: flex;
-		align-items: center;
-		justify-content: flex-end;
-		gap: var(--space-3);
-	}
-
-	.quiz-arrow {
-		display: grid;
-		place-items: center;
-		width: var(--size-touch);
-		height: var(--size-touch);
-		padding: 0;
-		border: 1px solid var(--border);
-		border-radius: var(--radius-full);
-		background: var(--fill-subtle);
-		color: var(--text-muted);
-		cursor: pointer;
-		transition: var(--transition-interactive);
-		-webkit-tap-highlight-color: transparent;
-	}
-
-	.quiz-arrow :global(svg.app-icon) {
-		width: var(--text-lg);
-		height: var(--text-lg);
-	}
-
-	.quiz-arrow:hover:not(:disabled),
-	.quiz-arrow:focus-visible:not(:disabled) {
-		border-color: var(--accent-dim);
-		color: var(--text);
-	}
-
-	.quiz-arrow:disabled {
-		opacity: 0.28;
-		cursor: not-allowed;
-	}
 </style>

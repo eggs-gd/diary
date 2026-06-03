@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { tick } from 'svelte';
-	import { AppFullscreen } from '$lib/components/ui';
+	import { PanelChromeBar } from '$lib/components/chrome';
+	import '$lib/components/chrome/chrome-layout.css';
+	import PanelShell from '$lib/components/navigation/PanelShell.svelte';
 	import {
 		addMonths,
 		buildMonthCells,
@@ -27,26 +29,29 @@
 	import type { DayEndHour } from '$lib/preferences/day-end';
 	import { useWeekStart } from '$lib/preferences';
 	import { hapticLight } from '$lib/platform/native';
+	import { PANEL_SLIDE_MS } from '$lib/navigation/panel-gestures';
 
 	interface Props {
-		open: boolean;
+		isTop: boolean;
+		visible: boolean;
 		entries: EventEntry[];
 		dayReflections: DayReflection[];
 		enableReflection?: boolean;
 		dayEndHour?: DayEndHour;
-		resetView?: boolean;
-		onClose: () => void;
+		takeResetView?: () => boolean;
+		onBack: () => void;
 		onSelectDay: (dayKey: string) => void;
 	}
 
 	let {
-		open,
+		isTop,
+		visible,
 		entries,
 		dayReflections,
 		enableReflection = true,
 		dayEndHour = 0,
-		resetView = true,
-		onClose,
+		takeResetView,
+		onBack,
 		onSelectDay
 	}: Props = $props();
 
@@ -85,7 +90,67 @@
 	let headerMonth = $state(new Date().getMonth());
 	let syncingFromScroll = $state(false);
 	let wasOpen = $state(false);
+	/** Scroll sync + infinite scroll wait until deck slide finishes. */
+	let scrollReady = $state(false);
+	let openInitTimer: number | null = null;
 	let scrollSyncFrame: number | null = null;
+
+	function cancelOpenInitTimer(): void {
+		if (openInitTimer !== null) {
+			clearTimeout(openInitTimer);
+			openInitTimer = null;
+		}
+	}
+
+	const SCROLL_SYNC_MS = 520;
+
+	async function scrollToTodayAnimated(): Promise<void> {
+		syncingFromScroll = true;
+		const now = new Date();
+		headerYear = now.getFullYear();
+		headerMonth = now.getMonth();
+		ensureMonthInRange(headerYear, headerMonth);
+		await tick();
+		if (!isTop) {
+			syncingFromScroll = false;
+			return;
+		}
+		scrollTodayIntoView('smooth');
+		await new Promise<void>((resolve) => {
+			window.setTimeout(resolve, SCROLL_SYNC_MS);
+		});
+		if (isTop) syncingFromScroll = false;
+	}
+
+	async function scrollToMonthAnimated(year: number, month: number): Promise<void> {
+		syncingFromScroll = true;
+		ensureMonthInRange(year, month);
+		await tick();
+		if (!isTop) {
+			syncingFromScroll = false;
+			return;
+		}
+		scrollToMonthKey(monthKey(year, month), 'smooth');
+		await new Promise<void>((resolve) => {
+			window.setTimeout(resolve, SCROLL_SYNC_MS);
+		});
+		if (isTop) syncingFromScroll = false;
+	}
+
+	async function finishOpenInit(shouldReset: boolean): Promise<void> {
+		if (!isTop) return;
+
+		if (shouldReset) {
+			await tick();
+			if (!isTop) return;
+			await scrollToTodayAnimated();
+		}
+
+		if (!isTop) return;
+		scrollReady = true;
+		releaseHeaderFocus();
+		requestAnimationFrame(releaseHeaderFocus);
+	}
 
 	const monthKeys = $derived(iterMonthKeys(rangeStart, rangeEnd));
 
@@ -134,6 +199,18 @@
 	function scrollToMonthKey(key: string, behavior: ScrollBehavior = 'smooth'): void {
 		const section = calendarRoot?.querySelector<HTMLElement>(`[data-month-key="${key}"]`);
 		section?.scrollIntoView({ behavior, block: 'start' });
+	}
+
+	function scrollTodayIntoView(behavior: ScrollBehavior = 'smooth'): void {
+		if (!calendarRoot) return;
+		const todayCell =
+			calendarRoot.querySelector<HTMLElement>(`[data-day-key="${today}"]`) ??
+			calendarRoot.querySelector<HTMLElement>('.calendar-day--today');
+		if (todayCell) {
+			todayCell.scrollIntoView({ behavior, block: 'center', inline: 'nearest' });
+			return;
+		}
+		scrollToMonthKey(monthKey(headerYear, headerMonth), behavior);
 	}
 
 	function ensureMonthInRange(year: number, month: number): void {
@@ -208,7 +285,7 @@
 	}
 
 	function queueHeaderSyncFromScroll(): void {
-		if (scrollSyncFrame !== null) return;
+		if (!scrollReady || scrollSyncFrame !== null) return;
 		scrollSyncFrame = requestAnimationFrame(() => {
 			scrollSyncFrame = null;
 			syncHeaderFromScroll();
@@ -216,21 +293,13 @@
 	}
 
 	async function jumpToHeaderMonth(): Promise<void> {
-		syncingFromScroll = true;
-		ensureMonthInRange(headerYear, headerMonth);
-		await tick();
-		scrollToMonthKey(monthKey(headerYear, headerMonth));
+		await scrollToMonthAnimated(headerYear, headerMonth);
 		void hapticLight();
-		window.setTimeout(() => {
-			syncingFromScroll = false;
-		}, 400);
 	}
 
 	async function jumpToToday(): Promise<void> {
-		const now = new Date();
-		headerYear = now.getFullYear();
-		headerMonth = now.getMonth();
-		await jumpToHeaderMonth();
+		await scrollToTodayAnimated();
+		void hapticLight();
 	}
 
 	function selectDay(cell: CalendarCell): void {
@@ -271,31 +340,47 @@
 	}
 
 	$effect(() => {
-		if (!open) {
-			wasOpen = false;
+		if (!isTop) {
+			syncingFromScroll = false;
+			cancelOpenInitTimer();
 			return;
 		}
 
-		const justOpened = !wasOpen;
-		wasOpen = true;
+		scrollReady = true;
 
-		if (justOpened && resetView) {
+		if (wasOpen) {
+			queueMicrotask(() => {
+				const scrollContainer = getScrollContainer();
+				if (!scrollContainer || !isTop) return;
+				const top = scrollContainer.scrollTop;
+				scrollContainer.scrollTop = top;
+				void scrollContainer.offsetHeight;
+			});
+			return;
+		}
+
+		wasOpen = true;
+		const shouldReset = takeResetView?.() ?? false;
+		if (shouldReset) {
 			resetCalendarView();
 		}
 
-		if (!justOpened) return;
+		cancelOpenInitTimer();
+		const runOpenInit = () => {
+			openInitTimer = null;
+			void finishOpenInit(shouldReset);
+		};
 
-		void tick().then(() => {
-			if (resetView) {
-				scrollToMonthKey(monthKey(headerYear, headerMonth), 'auto');
-			}
-			releaseHeaderFocus();
-			requestAnimationFrame(releaseHeaderFocus);
-		});
+		// Fresh open with reset: wait for main deck slide. Return from overlay: immediate.
+		if (shouldReset) {
+			openInitTimer = window.setTimeout(runOpenInit, PANEL_SLIDE_MS);
+		} else {
+			queueMicrotask(runOpenInit);
+		}
 	});
 
 	$effect(() => {
-		if (!open || !calendarRoot) return;
+		if (!isTop || !scrollReady || !calendarRoot) return;
 
 		const scrollContainer = getScrollContainer();
 		if (!scrollContainer) return;
@@ -312,7 +397,7 @@
 	});
 
 	$effect(() => {
-		if (!open || !topSentinel || !bottomSentinel) return;
+		if (!isTop || !scrollReady || !topSentinel || !bottomSentinel) return;
 
 		const scrollContainer = getScrollContainer();
 		if (!scrollContainer) return;
@@ -334,39 +419,45 @@
 	});
 </script>
 
-{#snippet header()}
-	<div class="calendar-head">
-		<button type="button" class="calendar-back" onclick={onClose}>
-			{i18n.t('analysis.back')}
-		</button>
+{#snippet chrome()}
+	<PanelChromeBar onBack={onBack} />
+{/snippet}
 
-		<h1 id="archive-calendar-title" class="calendar-title-sr">{i18n.t('archive.openCalendar')}</h1>
+{#snippet weekdayRow()}
+	<div class="calendar-weekdays" aria-hidden="true">
+		{#each weekdays as label, index (`${resolvedWeekStart}-${index}`)}
+			<span class="calendar-weekday">{label}</span>
+		{/each}
+	</div>
+{/snippet}
 
-		<div class="calendar-head-row">
-			<div class="calendar-head-pickers">
-				<select
-					class="calendar-select calendar-select--month"
-					aria-label={i18n.t('archive.selectMonth')}
-					bind:value={headerMonth}
-					onchange={jumpToHeaderMonth}
-				>
-					{#each monthOptions as option}
-						<option value={option.value}>{option.label}</option>
-					{/each}
-				</select>
+{#snippet footerChrome()}
+	<div class="chrome-float-bottom chrome-float-bottom--spread" role="toolbar" aria-label={i18n.t('archive.openCalendar')}>
+		<div class="calendar-float-group calendar-float-group--pickers">
+			<select
+				class="calendar-select calendar-select--year"
+				aria-label={i18n.t('archive.selectYear')}
+				bind:value={headerYear}
+				onchange={jumpToHeaderMonth}
+			>
+				{#each yearOptions as year}
+					<option value={year}>{year}</option>
+				{/each}
+			</select>
 
-				<select
-					class="calendar-select calendar-select--year"
-					aria-label={i18n.t('archive.selectYear')}
-					bind:value={headerYear}
-					onchange={jumpToHeaderMonth}
-				>
-					{#each yearOptions as year}
-						<option value={year}>{year}</option>
-					{/each}
-				</select>
-			</div>
+			<select
+				class="calendar-select calendar-select--month"
+				aria-label={i18n.t('archive.selectMonth')}
+				bind:value={headerMonth}
+				onchange={jumpToHeaderMonth}
+			>
+				{#each monthOptions as option}
+					<option value={option.value}>{option.label}</option>
+				{/each}
+			</select>
+		</div>
 
+		<div class="calendar-float-group calendar-float-group--today">
 			<button type="button" class="calendar-today-btn" onclick={jumpToToday}>
 				{i18n.t('archive.today')}
 			</button>
@@ -374,15 +465,11 @@
 	</div>
 {/snippet}
 
-<AppFullscreen {open} labelledBy="archive-calendar-title" showClose={false} {onClose} {header}>
+<PanelShell {isTop} {visible} labelledBy="archive-calendar-title" {chrome} {footerChrome}>
 	{#snippet children()}
-		<div class="calendar" bind:this={calendarRoot}>
-			<div class="calendar-weekdays" aria-hidden="true">
-				{#each weekdays as label, index (`${resolvedWeekStart}-${index}`)}
-					<span class="calendar-weekday">{label}</span>
-				{/each}
-			</div>
+		<h1 id="archive-calendar-title" class="calendar-title-sr">{i18n.t('archive.openCalendar')}</h1>
 
+		<div class="calendar" bind:this={calendarRoot}>
 			<div class="calendar-months">
 				<div class="calendar-sentinel" bind:this={topSentinel} aria-hidden="true"></div>
 
@@ -406,12 +493,15 @@
 							<p class="calendar-month-year">{parsed.year}</p>
 						</div>
 
+						{@render weekdayRow()}
+
 						<div class="calendar-grid" role="grid">
 							{#each monthCells(key) as cell (cell.key)}
 								{#if cell.inMonth}
 									<button
 										type="button"
 										class="calendar-day"
+										data-day-key={cell.key}
 										class:calendar-day--today={cell.isToday}
 										class:calendar-day--selectable={!cell.isFuture}
 										class:calendar-day--has-entries={cell.count > 0}
@@ -449,40 +539,9 @@
 			</div>
 		</div>
 	{/snippet}
-</AppFullscreen>
+</PanelShell>
 
 <style>
-	.calendar-head {
-		position: relative;
-		display: flex;
-		flex-direction: column;
-		gap: 0.5em;
-		width: 100%;
-		min-width: 0;
-	}
-
-	.calendar-back {
-		align-self: flex-start;
-		margin: 0;
-		padding: 0;
-		border: none;
-		background: transparent;
-		font-family: var(--font-sans);
-		font-size: 0.75em;
-		font-weight: 400;
-		line-height: var(--leading-normal);
-		color: var(--text-muted);
-		cursor: pointer;
-		transition: color var(--transition-interactive);
-		-webkit-tap-highlight-color: transparent;
-	}
-
-	.calendar-back:hover,
-	.calendar-back:focus-visible {
-		color: var(--text-soft);
-		outline: none;
-	}
-
 	.calendar-title-sr {
 		position: absolute;
 		width: 1px;
@@ -495,34 +554,43 @@
 		border: 0;
 	}
 
-	.calendar-head-row {
-		display: flex;
+	.calendar-float-group {
+		--calendar-cap: calc(var(--size-ios-chrome) / 2);
+		display: inline-flex;
 		align-items: stretch;
-		gap: 0.5em;
-		width: 100%;
-		min-width: 0;
-		--calendar-head-control-height: 2.25rem;
+		flex-shrink: 0;
+		height: var(--size-ios-chrome);
+		border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
+		background: color-mix(in srgb, var(--bg-elevated) 92%, transparent);
+		backdrop-filter: blur(12px);
+		-webkit-backdrop-filter: blur(12px);
+		box-shadow: var(--shadow-chrome);
+		overflow: hidden;
 	}
 
-	.calendar-head-pickers {
-		display: flex;
-		flex: 0 0 auto;
-		align-items: stretch;
-		gap: 0.5em;
+	.calendar-float-group--pickers {
 		min-width: 0;
+		max-width: min(100%, 20rem);
+		border-radius: var(--calendar-cap);
+	}
+
+	.calendar-float-group--today {
+		flex: 0 0 auto;
+		border-radius: var(--calendar-cap);
 	}
 
 	.calendar-select {
+		-webkit-appearance: none;
 		appearance: none;
 		box-sizing: border-box;
-		height: var(--calendar-head-control-height);
-		min-height: var(--calendar-head-control-height);
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		background: var(--fill-subtle);
+		height: 100%;
+		margin: 0;
+		border: none;
+		border-radius: 0;
+		background: transparent;
 		color: var(--text);
 		font-family: var(--font-serif);
-		font-size: 1.125em;
+		font-size: 1rem;
 		font-weight: 400;
 		line-height: var(--leading-tight);
 		padding: 0 calc(1em + 0.75rem) 0 0.75em;
@@ -535,6 +603,14 @@
 		text-transform: capitalize;
 	}
 
+	.calendar-select--year {
+		flex: 0 0 auto;
+		width: 5.5em;
+		min-width: 0;
+		font-variant-numeric: tabular-nums;
+		border-right: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+	}
+
 	.calendar-select--month {
 		flex: 0 1 auto;
 		width: auto;
@@ -542,27 +618,18 @@
 		min-width: 0;
 	}
 
-	.calendar-select--year {
-		flex: 0 0 auto;
-		width: 5.5em;
-		min-width: 0;
-		font-variant-numeric: tabular-nums;
-	}
-
 	.calendar-today-btn {
 		box-sizing: border-box;
-		height: var(--calendar-head-control-height);
-		min-height: var(--calendar-head-control-height);
-		margin-left: auto;
-		flex: 0 0 auto;
-		align-self: stretch;
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		width: 100%;
+		height: 100%;
+		margin: 0;
 		padding: 0 1em;
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		background: var(--fill-subtle);
+		border: none;
+		border-radius: 0;
+		background: transparent;
 		color: var(--text-muted);
 		font-family: var(--font-sans);
 		font-size: 0.75em;
@@ -576,16 +643,18 @@
 		white-space: nowrap;
 	}
 
-	.calendar-today-btn:hover,
-	.calendar-today-btn:focus-visible {
-		border-color: var(--accent-dim);
-		color: var(--text);
-		outline: none;
-	}
-
+	.calendar-float-group--today:hover,
+	.calendar-float-group--today:focus-within,
 	.calendar-select:hover,
 	.calendar-select:focus-visible {
-		border-color: var(--accent-dim);
+		background: color-mix(in srgb, var(--bg-elevated) 92%, var(--fill-subtle));
+	}
+
+	.calendar-float-group--today:hover .calendar-today-btn,
+	.calendar-float-group--today:focus-within .calendar-today-btn,
+	.calendar-select:hover,
+	.calendar-select:focus-visible {
+		color: var(--text);
 		outline: none;
 	}
 
@@ -598,14 +667,9 @@
 	}
 
 	.calendar-weekdays {
-		position: sticky;
-		top: 0;
-		z-index: 1;
 		display: grid;
 		grid-template-columns: repeat(7, minmax(0, 1fr));
 		gap: var(--space-1);
-		padding-bottom: var(--space-2);
-		background: var(--bg);
 	}
 
 	.calendar-weekday {

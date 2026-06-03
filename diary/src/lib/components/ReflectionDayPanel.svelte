@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { tick } from 'svelte';
-	import { AppFullscreen } from '$lib/components/ui';
+	import { ChromeRoundButton, PanelChromeBar } from '$lib/components/chrome';
+	import PanelShell from '$lib/components/navigation/PanelShell.svelte';
 	import EventKindIcon from '$lib/components/EventKindIcon.svelte';
 	import ReflectEntryCard from '$lib/components/ReflectEntryCard.svelte';
-	import ScoreDots from '$lib/components/ScoreDots.svelte';
 	import ScorePicker from '$lib/components/ScorePicker.svelte';
 	import { AppIcon } from '$lib/icons';
 	import {
@@ -26,28 +26,30 @@
 	}
 
 	interface Props {
-		open: boolean;
+		isTop: boolean;
+		visible: boolean;
 		dayKey: string;
 		label?: string;
 		entries?: EventEntry[];
 		saved?: DayReflection | null;
 		source?: string;
 		enableReflection?: boolean;
-		onClose: () => void;
+		onBack: () => void;
 		onPersist: (reflection: DayReflection) => Promise<void>;
 		onAddEntry: (preset: EntryPreset) => void;
 		onOpenEntry: (entry: EventEntry) => void;
 	}
 
 	let {
-		open,
+		isTop,
+		visible,
 		dayKey,
 		label = '',
 		entries = [],
 		saved = null,
 		source = 'archive',
 		enableReflection = true,
-		onClose,
+		onBack,
 		onPersist,
 		onAddEntry,
 		onOpenEntry
@@ -102,7 +104,7 @@
 	} as const satisfies Record<string, EntryPreset>;
 
 	$effect(() => {
-		if (!open || !dayKey || dayKey === loadedDayKey) return;
+		if (!isTop || !dayKey || dayKey === loadedDayKey) return;
 
 		loadedDayKey = dayKey;
 		const source = saved ?? emptyDayReflection(dayKey);
@@ -119,7 +121,7 @@
 	});
 
 	$effect(() => {
-		if (open) return;
+		if (isTop) return;
 		loadedDayKey = null;
 		nextActionsFocused = false;
 		insightsFocused = false;
@@ -127,7 +129,7 @@
 
 	// Mark edited when focus leaves the field (blur detection via focused state)
 	$effect(() => {
-		if (!open) return;
+		if (!isTop) return;
 		if (!nextActionsFocused) {
 			// If we had focused and now lost focus, check if content changed
 			if (nextActions.trim() !== baselineNextActions.trim()) {
@@ -137,7 +139,7 @@
 	});
 
 	$effect(() => {
-		if (!open) return;
+		if (!isTop) return;
 		if (!insightsFocused) {
 			if (insights.trim() !== baselineInsights.trim()) {
 				insightsEdited = true;
@@ -146,7 +148,7 @@
 	});
 
 	$effect(() => {
-		if (!open || (!nextActionsFocused && !insightsFocused)) return;
+		if (!isTop || (!nextActionsFocused && !insightsFocused)) return;
 		void tick().then(() => {
 			requestAnimationFrame(() => {
 				const active = document.activeElement;
@@ -200,7 +202,7 @@
 				closeAfter
 			});
 			void hapticLight();
-			if (closeAfter) onClose();
+			if (closeAfter) onBack();
 		} finally {
 			saving = false;
 		}
@@ -210,7 +212,7 @@
 		if (hasChanges) {
 			await persist(false);
 		}
-		onClose();
+		onBack();
 	}
 
 	function markNextActionsEdited(): void {
@@ -250,14 +252,18 @@
 	<AppIcon name="edit" class="inline-edit-icon" />
 {/snippet}
 
-{#snippet header()}
-	<div class="day-header">
-		<button type="button" class="day-back" onclick={() => void back()}>
-			{i18n.t('analysis.back')}
-		</button>
-
-		<h1 id="reflection-day-title" class="day-header__title">{dayLabel}</h1>
-	</div>
+{#snippet chrome()}
+	<PanelChromeBar onBack={() => void back()}>
+		{#snippet trailing()}
+			{#if enableReflection && canSave}
+				<ChromeRoundButton
+					icon="check"
+					label={i18n.t('dayReflection.save')}
+					onclick={() => void persist(true)}
+				/>
+			{/if}
+		{/snippet}
+	</PanelChromeBar>
 {/snippet}
 
 {#snippet sectionHead(titleId: string, title: string, preset: EntryPreset, section: string)}
@@ -268,14 +274,11 @@
 			</span>
 			<h2 class="quiz-question" id={titleId}>{title}</h2>
 		</div>
-		<button
-			type="button"
-			class="day-add"
-			aria-label={i18n.t('dayReflection.addEntry')}
+		<ChromeRoundButton
+			icon="add"
+			label={i18n.t('dayReflection.addEntry')}
 			onclick={() => addEntry(preset, section)}
-		>
-			<AppIcon name="add" />
-		</button>
+		/>
 	</div>
 {/snippet}
 
@@ -301,17 +304,25 @@
 	{/if}
 {/snippet}
 
-<AppFullscreen
-	{open}
+<PanelShell
+	{isTop}
+	{visible}
 	labelledBy="reflection-day-title"
-	showClose={false}
 	keyboardAware
 	onViewportChange={resizeViewport}
-	onClose={() => void back()}
-	{header}
+	{chrome}
 >
 	{#snippet children()}
 		<article class="day-reflection">
+			<header class="day-header">
+				<h1 id="reflection-day-title" class="day-header__title">{dayLabel}</h1>
+				<ScorePicker
+					value={dayScore}
+					ariaLabel={i18n.t('dayReflection.dayScore')}
+					readonly
+				/>
+			</header>
+
 			<section class="day-section day-section--entries" aria-labelledby="day-positive-events">
 				{@render sectionHead(
 					'day-positive-events',
@@ -377,62 +388,17 @@
 					/>
 				</section>
 			{/if}
-
-			<section class="day-section day-section--score" aria-labelledby="day-score">
-				<h2 class="quiz-question" id="day-score">{i18n.t('dayReflection.dayScore')}</h2>
-				<ScorePicker
-					value={dayScore}
-					ariaLabel={i18n.t('dayReflection.dayScore')}
-					readonly
-				/>
-			</section>
-
-			{#if enableReflection}
-				<footer class="day-footer">
-					<button
-						type="button"
-						class="day-save"
-						disabled={!canSave}
-						aria-label={i18n.t('dayReflection.save')}
-						onclick={() => void persist(true)}
-					>
-						<AppIcon name="check" />
-					</button>
-				</footer>
-			{/if}
 		</article>
 	{/snippet}
-</AppFullscreen>
+</PanelShell>
 
 <style>
 	.day-header {
 		display: flex;
 		flex-direction: column;
-		gap: var(--space-2);
+		gap: var(--space-3);
 		width: 100%;
 		min-width: 0;
-	}
-
-	.day-back {
-		align-self: flex-start;
-		margin: 0;
-		padding: 0;
-		border: none;
-		background: transparent;
-		font-family: var(--font-sans);
-		font-size: var(--text-sm);
-		font-weight: 400;
-		line-height: var(--leading-normal);
-		color: var(--text-muted);
-		cursor: pointer;
-		transition: color var(--transition-interactive);
-		-webkit-tap-highlight-color: transparent;
-	}
-
-	.day-back:hover,
-	.day-back:focus-visible {
-		color: var(--text-soft);
-		outline: none;
 	}
 
 	.day-header__title {
@@ -442,6 +408,10 @@
 		font-weight: 400;
 		line-height: var(--leading-tight);
 		color: var(--text);
+	}
+
+	.day-header :global(.score-picker-wrap) {
+		margin: 0;
 	}
 
 	.day-reflection {
@@ -460,10 +430,6 @@
 	.day-section {
 		display: grid;
 		gap: var(--space-2);
-	}
-
-	.day-section--score :global(.score-picker-wrap) {
-		margin-top: var(--space-1);
 	}
 
 	.day-section__head {
@@ -508,33 +474,6 @@
 		color: var(--text);
 	}
 
-	.day-add {
-		display: grid;
-		place-items: center;
-		flex-shrink: 0;
-		width: 1.875rem;
-		height: 1.875rem;
-		margin-top: 0.15em;
-		padding: 0;
-		border: none;
-		background: transparent;
-		color: var(--text-muted);
-		cursor: pointer;
-		transition: color var(--transition-interactive);
-		-webkit-tap-highlight-color: transparent;
-	}
-
-	.day-add :global(svg.app-icon) {
-		width: 1.375rem;
-		height: 1.375rem;
-	}
-
-	.day-add:hover,
-	.day-add:focus-visible {
-		color: var(--text-soft);
-		outline: none;
-	}
-
 	.day-empty {
 		margin: 0;
 		font-size: var(--text-sm);
@@ -560,41 +499,4 @@
 		padding-top: 0;
 	}
 
-	.day-footer {
-		display: flex;
-		justify-content: flex-end;
-		padding-top: var(--space-2);
-	}
-
-	.day-save {
-		display: grid;
-		place-items: center;
-		width: var(--size-touch);
-		height: var(--size-touch);
-		padding: 0;
-		border: 1px solid var(--border);
-		border-radius: var(--radius-full);
-		background: var(--fill-subtle);
-		color: var(--text-muted);
-		cursor: pointer;
-		transition: var(--transition-interactive);
-		-webkit-tap-highlight-color: transparent;
-	}
-
-	.day-save :global(svg.app-icon) {
-		width: var(--text-lg);
-		height: var(--text-lg);
-	}
-
-	.day-save:hover:not(:disabled),
-	.day-save:focus-visible:not(:disabled) {
-		border-color: var(--accent-dim);
-		color: var(--text);
-		outline: none;
-	}
-
-	.day-save:disabled {
-		opacity: 0.28;
-		cursor: not-allowed;
-	}
 </style>

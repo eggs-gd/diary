@@ -69,7 +69,18 @@
 	--content-max-width: 32rem;
 	--popup-max-height: min(90dvh, 40rem);
 	--z-chrome: 150;
+	--z-panel-deck: 120;
+	--z-profile-drawer: 160;
 	--size-touch: 2.25rem;
+	/* iOS HIG minimum tappable control */
+	--size-ios-chrome: 2.75rem;
+	--shadow-chrome: 0 4px 24px color-mix(in srgb, var(--bg) 55%, transparent);
+	--panel-chrome-inset: calc(
+		var(--size-ios-chrome) + var(--space-3) + var(--space-2) + env(safe-area-inset-top, 0px)
+	);
+	--panel-chrome-footer-inset: calc(
+		var(--size-ios-chrome) + var(--space-3) + var(--space-4) + env(safe-area-inset-bottom, 0px)
+	);
 }
 
 *,
@@ -88,10 +99,6 @@ html.scroll-locked,
 html.scroll-locked body {
 	overflow: hidden;
 	overscroll-behavior: none;
-}
-
-html.scroll-locked .app {
-	pointer-events: none;
 }
 
 body {

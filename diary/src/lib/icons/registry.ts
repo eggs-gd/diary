@@ -2,6 +2,7 @@ import type { Component } from 'svelte';
 import {
 	Calendar,
 	Check,
+	Menu,
 	ChevronLeft,
 	ChevronRight,
 	ChevronUp,
@@ -34,6 +35,7 @@ export type IconName =
 	| 'edit'
 	| 'kindAct'
 	| 'kindEvent'
+	| 'menu'
 	| 'profile'
 	| 'refresh'
 	| 'reflectComplete'
@@ -52,6 +54,7 @@ export const ICONS = {
 	edit: Pencil,
 	kindAct: User,
 	kindEvent: Orbit,
+	menu: Menu,
 	profile: User,
 	refresh: RefreshCw,
 	reflectComplete: FileText,

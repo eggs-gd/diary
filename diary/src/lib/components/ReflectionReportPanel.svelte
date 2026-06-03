@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { tick } from 'svelte';
-	import { AppFullscreen } from '$lib/components/ui';
+	import { ChromeRoundButton, PanelChromeBar } from '$lib/components/chrome';
+	import PanelShell from '$lib/components/navigation/PanelShell.svelte';
 	import EventKindSwitcher from '$lib/components/EventKindSwitcher.svelte';
 	import ScorePicker from '$lib/components/ScorePicker.svelte';
 	import QuizTextField from '$lib/components/QuizTextField.svelte';
@@ -18,15 +19,16 @@
 	type ProtocolField = (typeof protocolFields)[number];
 
 	interface Props {
-		open: boolean;
+		isTop: boolean;
+		visible: boolean;
 		entry: EventEntry | null;
 		source?: string;
 		enableReflection?: boolean;
-		onClose: () => void;
+		onBack: () => void;
 		onPersist: (entry: EventEntry) => Promise<void>;
 	}
 
-	let { open, entry, source = 'archive', enableReflection = true, onClose, onPersist }: Props = $props();
+	let { isTop, visible, entry, source = 'archive', enableReflection = true, onBack, onPersist }: Props = $props();
 
 	const i18n = useI18n();
 
@@ -102,7 +104,7 @@
 	}
 
 	$effect(() => {
-		if (!open || !entry) return;
+		if (!isTop || !entry) return;
 
 		const snapshot = entrySnapshot(entry);
 		if (snapshot === loadedSnapshot) return;
@@ -112,14 +114,14 @@
 	});
 
 	$effect(() => {
-		if (open) return;
+		if (isTop) return;
 		loadedSnapshot = null;
 		editingEvent = false;
 		fieldFocused = { reason: false, about: false, view: false, actions: false };
 	});
 
 	$effect(() => {
-		if (!open || !editingEvent) return;
+		if (!isTop || !editingEvent) return;
 		draft.event;
 		void tick().then(queueEventInputResize);
 	});
@@ -195,7 +197,7 @@
 		if (saving) return;
 
 		if (!hasChanges) {
-			if (closeAfter) onClose();
+			if (closeAfter) onBack();
 			return;
 		}
 
@@ -217,7 +219,7 @@
 				closeAfter
 			});
 			void hapticLight();
-			if (closeAfter) onClose();
+			if (closeAfter) onBack();
 		} finally {
 			saving = false;
 		}
@@ -227,7 +229,7 @@
 		if (hasChanges) {
 			await persist(false);
 		}
-		onClose();
+		onBack();
 	}
 </script>
 
@@ -235,51 +237,57 @@
 	<AppIcon name="edit" class="inline-edit-icon" />
 {/snippet}
 
-{#snippet header()}
-	<div class="report-header">
-		<button type="button" class="report-back" onclick={() => void backToArchive()}>
-			{i18n.t('analysis.back')}
-		</button>
-
-		<div class="report-title-wrap">
-			{#if editingEvent}
-				<textarea
-					id="reflection-report-title"
-					bind:this={eventInput}
-					class="report-title__input"
-					bind:value={draft.event}
-					rows="1"
-					aria-label={i18n.t('capture.event')}
-					onblur={onEventBlur}
-					oninput={queueEventInputResize}
-				></textarea>
-			{:else}
-				<button
-					type="button"
-					id="reflection-report-title"
-					class="report-title"
-					aria-label={i18n.t('analysis.edit')}
-					onclick={() => void focusEventInput()}
-				>
-					{draft.event.trim() || entry?.text || '—'}{@render editIcon()}
-				</button>
+{#snippet chrome()}
+	<PanelChromeBar onBack={() => void backToArchive()}>
+		{#snippet trailing()}
+			{#if hasChanges}
+				<ChromeRoundButton
+					icon="check"
+					label={i18n.t('analysis.saveReflection')}
+					disabled={saving}
+					onclick={() => void persist(true)}
+				/>
 			{/if}
-		</div>
-	</div>
+		{/snippet}
+	</PanelChromeBar>
 {/snippet}
 
-<AppFullscreen
-	{open}
+<PanelShell
+	{isTop}
+	{visible}
 	labelledBy="reflection-report-title"
-	showClose={false}
 	keyboardAware
 	onViewportChange={resizeViewport}
-	onClose={() => void backToArchive()}
-	{header}
+	{chrome}
 >
 	{#snippet children()}
 		{#if entry}
 			<article class="reflection-report">
+				<div class="report-title-wrap">
+					{#if editingEvent}
+						<textarea
+							id="reflection-report-title"
+							bind:this={eventInput}
+							class="report-title__input"
+							bind:value={draft.event}
+							rows="1"
+							aria-label={i18n.t('capture.event')}
+							onblur={onEventBlur}
+							oninput={queueEventInputResize}
+						></textarea>
+					{:else}
+						<button
+							type="button"
+							id="reflection-report-title"
+							class="report-title"
+							aria-label={i18n.t('analysis.edit')}
+							onclick={() => void focusEventInput()}
+						>
+							{draft.event.trim() || entry?.text || '—'}{@render editIcon()}
+						</button>
+					{/if}
+				</div>
+
 				{#if enableReflection}
 					{#each protocolFields as field (field)}
 						<section class="report-section" aria-labelledby="report-{field}">
@@ -305,56 +313,16 @@
 					/>
 				</section>
 
-				<footer class="report-footer">
-					<button
-						type="button"
-						class="report-save"
-						disabled={saving}
-						aria-label={i18n.t('analysis.saveReflection')}
-						onclick={() => void persist(true)}
-					>
-						<AppIcon name="check" />
-					</button>
-				</footer>
 			</article>
 		{/if}
 	{/snippet}
-</AppFullscreen>
+</PanelShell>
 
 <style>
-	.report-header {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-2);
-		width: 100%;
-		min-width: 0;
-	}
-
-	.report-back {
-		align-self: flex-start;
-		margin: 0;
-		padding: 0;
-		border: none;
-		background: transparent;
-		font-family: var(--font-sans);
-		font-size: var(--text-sm);
-		font-weight: 400;
-		line-height: var(--leading-normal);
-		color: var(--text-muted);
-		cursor: pointer;
-		transition: color var(--transition-interactive);
-		-webkit-tap-highlight-color: transparent;
-	}
-
-	.report-back:hover,
-	.report-back:focus-visible {
-		color: var(--text-soft);
-		outline: none;
-	}
-
 	.report-title-wrap {
 		width: 100%;
 		min-width: 0;
+		margin-bottom: var(--space-4);
 	}
 
 	.report-title {
@@ -427,41 +395,4 @@
 		color: var(--text);
 	}
 
-	.report-footer {
-		display: flex;
-		justify-content: flex-end;
-		padding-top: var(--space-2);
-	}
-
-	.report-save {
-		display: grid;
-		place-items: center;
-		width: var(--size-touch);
-		height: var(--size-touch);
-		padding: 0;
-		border: 1px solid var(--border);
-		border-radius: var(--radius-full);
-		background: var(--fill-subtle);
-		color: var(--text-muted);
-		cursor: pointer;
-		transition: var(--transition-interactive);
-		-webkit-tap-highlight-color: transparent;
-	}
-
-	.report-save :global(svg.app-icon) {
-		width: var(--text-lg);
-		height: var(--text-lg);
-	}
-
-	.report-save:hover:not(:disabled),
-	.report-save:focus-visible:not(:disabled) {
-		border-color: var(--accent-dim);
-		color: var(--text);
-		outline: none;
-	}
-
-	.report-save:disabled {
-		opacity: 0.28;
-		cursor: not-allowed;
-	}
 </style>

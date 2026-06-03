@@ -2,12 +2,12 @@
 	import { onMount } from 'svelte';
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
-	import ProfileMenu from '$lib/components/ProfileMenu.svelte';
 	import ScrollToTop from '$lib/components/ScrollToTop.svelte';
 	import { track } from '$lib/analytics';
 	import { initI18n, useI18n } from '$lib/i18n';
 	import { initDayEnd, initReflectionEnabled, initWeekStart } from '$lib/preferences';
 	import { initNativePlatform, teardownNativePlatform } from '$lib/platform/native';
+	import { handleAppBack } from '$lib/navigation/navigation-host.svelte';
 
 	let { children } = $props();
 
@@ -20,9 +20,7 @@ initReflectionEnabled();
 	onMount(() => {
 		track('app_open');
 		void initNativePlatform(() => {
-			if (typeof history !== 'undefined' && history.length > 1) {
-				history.back();
-			}
+			handleAppBack();
 		});
 		return () => teardownNativePlatform();
 	});
@@ -41,9 +39,6 @@ initReflectionEnabled();
 		<ScrollToTop />
 	</div>
 	{@render children()}
-	<div class="profile-bar">
-		<ProfileMenu />
-	</div>
 </div>
 
 <style>
@@ -79,15 +74,4 @@ initReflectionEnabled();
 		height: 1.35rem;
 	}
 
-	.profile-bar {
-		position: fixed;
-		top: 0;
-		left: 0;
-		z-index: var(--z-chrome);
-		display: flex;
-		justify-content: flex-start;
-		padding: calc(var(--space-3) + env(safe-area-inset-top, 0px)) 0 0
-			calc(var(--space-3) + env(safe-area-inset-left, 0px));
-		pointer-events: auto;
-	}
 </style>

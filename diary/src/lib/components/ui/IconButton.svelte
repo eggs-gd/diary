@@ -40,8 +40,8 @@
 	.icon-btn {
 		display: grid;
 		place-items: center;
-		width: var(--size-touch);
-		height: var(--size-touch);
+		width: var(--size-ios-chrome);
+		height: var(--size-ios-chrome);
 		padding: 0;
 		border: 1px solid var(--border);
 		border-radius: var(--radius-full);

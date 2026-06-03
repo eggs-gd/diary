@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { tick } from 'svelte';
-	import { AppFullscreen } from '$lib/components/ui';
+	import { ChromeRoundButton, PanelChromeBar } from '$lib/components/chrome';
+	import PanelShell from '$lib/components/navigation/PanelShell.svelte';
 	import ScorePicker from '$lib/components/ScorePicker.svelte';
 	import EventKindSwitcher from '$lib/components/EventKindSwitcher.svelte';
 	import { AppIcon } from '$lib/icons';
@@ -15,14 +16,15 @@
 	import { track } from '$lib/analytics';
 
 	interface Props {
-		open: boolean;
+		isTop: boolean;
+		visible: boolean;
 		entry: EventEntry | null;
-		onClose: () => void;
+		onBack: () => void;
 		onPersist: (entry: EventEntry) => Promise<void>;
 		onComplete: (entry: EventEntry) => Promise<void>;
 	}
 
-	let { open, entry, onClose, onPersist, onComplete }: Props = $props();
+	let { isTop, visible, entry, onBack, onPersist, onComplete }: Props = $props();
 
 	const i18n = useI18n();
 
@@ -76,7 +78,7 @@
 	});
 
 	$effect(() => {
-		if (!open) {
+		if (!isTop) {
 			editingEvent = false;
 			loadedEntryId = null;
 			inputFocused = false;
@@ -85,7 +87,7 @@
 	});
 
 	$effect(() => {
-		if (!open || !entry) return;
+		if (!isTop || !entry) return;
 		const stepKey = `${entry.id}:${stepIndex}`;
 		if (stepKey === trackedStepKey) return;
 		trackedStepKey = stepKey;
@@ -127,7 +129,7 @@
 	}
 
 	$effect(() => {
-		if (!open || !editingEvent) return;
+		if (!isTop || !editingEvent) return;
 		draft.event;
 		void tick().then(queueEventInputResize);
 	});
@@ -139,7 +141,7 @@
 	});
 
 	$effect(() => {
-		if (!open || !entry || isResonanceStep) return;
+		if (!isTop || !entry || isResonanceStep) return;
 		stepIndex;
 		inputFocused = false;
 	});
@@ -212,7 +214,7 @@
 	async function backToArchive(): Promise<void> {
 		await persistDraft();
 		editingEvent = false;
-		onClose();
+		onBack();
 	}
 
 	async function completeReflection(): Promise<void> {
@@ -237,51 +239,57 @@
 	<AppIcon name="edit" class="inline-edit-icon" />
 {/snippet}
 
-{#snippet header()}
-	<div class="event-shell">
-		<button type="button" class="event-back" onclick={() => void backToArchive()}>
-			{i18n.t('analysis.back')}
-		</button>
-
-		<div class="event-header">
-			{#if editingEvent}
-				<textarea
-					id="reflection-event-title"
-					bind:this={eventInput}
-					class="event-header__input"
-					bind:value={draft.event}
-					rows="1"
-					aria-label={i18n.t('capture.event')}
-					onblur={onEventBlur}
-					oninput={queueEventInputResize}
-				></textarea>
-			{:else}
-				<button
-					type="button"
-					id="reflection-event-title"
-					class="event-header__title"
-					aria-label={i18n.t('analysis.edit')}
-					onclick={() => void focusEventInput()}
-				>
-					{draft.event.trim() || entry?.text || '—'}{@render editIcon()}
-				</button>
+{#snippet chrome()}
+	<PanelChromeBar onBack={() => void backToArchive()}>
+		{#snippet trailing()}
+			{#if isResonanceStep}
+				<ChromeRoundButton
+					icon="check"
+					label={i18n.t('analysis.saveReflection')}
+					disabled={saving}
+					onclick={() => void completeReflection()}
+				/>
 			{/if}
-		</div>
-	</div>
+		{/snippet}
+	</PanelChromeBar>
 {/snippet}
 
-<AppFullscreen
-	{open}
+<PanelShell
+	{isTop}
+	{visible}
 	bodyFill
 	keyboardAware
-	showClose={false}
 	onViewportChange={resizeViewport}
 	labelledBy="reflection-event-title"
-	{onClose}
-	{header}
+	{chrome}
 >
 	{#snippet children()}
 		{#if entry}
+			<div class="event-header">
+				{#if editingEvent}
+					<textarea
+						id="reflection-event-title"
+						bind:this={eventInput}
+						class="event-header__input"
+						bind:value={draft.event}
+						rows="1"
+						aria-label={i18n.t('capture.event')}
+						onblur={onEventBlur}
+						oninput={queueEventInputResize}
+					></textarea>
+				{:else}
+					<button
+						type="button"
+						id="reflection-event-title"
+						class="event-header__title"
+						aria-label={i18n.t('analysis.edit')}
+						onclick={() => void focusEventInput()}
+					>
+						{draft.event.trim() || entry?.text || '—'}{@render editIcon()}
+					</button>
+				{/if}
+			</div>
+
 			<div class="reflection">
 				<div class="reflection-gap" aria-hidden="true"></div>
 
@@ -308,37 +316,26 @@
 						/>
 					{/if}
 
-					<nav class="quiz-nav quiz-step__footer" aria-label={i18n.t('analysis.title')}>
-						<button
-							type="button"
-							class="quiz-arrow"
-							disabled={!canGoBack || saving}
-							aria-label={i18n.t('analysis.prev')}
-							onclick={() => void goBack()}
-						>
-							<AppIcon name="chevronLeft" />
-						</button>
-
-						{#if isResonanceStep}
-							<button
-								type="button"
-								class="quiz-arrow"
+					<nav
+						class="quiz-nav quiz-step__footer"
+						class:quiz-nav--next-only={!canGoBack && !isResonanceStep}
+						aria-label={i18n.t('analysis.title')}
+					>
+						{#if canGoBack}
+							<ChromeRoundButton
+								icon="chevronLeft"
+								label={i18n.t('analysis.prev')}
 								disabled={saving}
-								aria-label={i18n.t('analysis.saveReflection')}
-								onclick={() => void completeReflection()}
-							>
-								<AppIcon name="check" />
-							</button>
-						{:else}
-							<button
-								type="button"
-								class="quiz-arrow"
+								onclick={() => void goBack()}
+							/>
+						{/if}
+						{#if !isResonanceStep}
+							<ChromeRoundButton
+								icon="chevronRight"
+								label={i18n.t('analysis.next')}
 								disabled={!canGoForward || saving}
-								aria-label={i18n.t('analysis.next')}
 								onclick={() => void goForward()}
-							>
-								<AppIcon name="chevronRight" />
-							</button>
+							/>
 						{/if}
 					</nav>
 				</section>
@@ -347,40 +344,13 @@
 			</div>
 		{/if}
 	{/snippet}
-</AppFullscreen>
+</PanelShell>
 
 <style>
-	.event-shell {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-2);
-		width: 100%;
-	}
-
-	.event-back {
-		align-self: flex-start;
-		margin: 0;
-		padding: 0;
-		border: none;
-		background: transparent;
-		font-family: var(--font-sans);
-		font-size: var(--text-sm);
-		font-weight: 400;
-		line-height: var(--leading-normal);
-		color: var(--text-muted);
-		cursor: pointer;
-		transition: color var(--transition-interactive);
-		-webkit-tap-highlight-color: transparent;
-	}
-
-	.event-back:hover,
-	.event-back:focus-visible {
-		color: var(--text-soft);
-		outline: none;
-	}
-
 	.event-header {
 		width: 100%;
+		max-width: var(--content-max-width);
+		margin: 0 auto var(--space-3);
 	}
 
 	.event-header__title {
@@ -481,36 +451,11 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: var(--space-4);
+		width: 100%;
+		margin: 0;
 	}
 
-	.quiz-arrow {
-		display: grid;
-		place-items: center;
-		width: var(--size-touch);
-		height: var(--size-touch);
-		padding: 0;
-		border: 1px solid var(--border);
-		border-radius: var(--radius-full);
-		background: var(--fill-subtle);
-		color: var(--text-muted);
-		cursor: pointer;
-		transition: var(--transition-interactive);
-		-webkit-tap-highlight-color: transparent;
-	}
-
-	.quiz-arrow :global(svg.app-icon) {
-		width: var(--text-lg);
-		height: var(--text-lg);
-	}
-
-	.quiz-arrow:hover:not(:disabled),
-	.quiz-arrow:focus-visible:not(:disabled) {
-		border-color: var(--accent-dim);
-		color: var(--text);
-	}
-
-	.quiz-arrow:disabled {
-		opacity: 0.28;
-		cursor: not-allowed;
+	.quiz-nav--next-only {
+		justify-content: flex-end;
 	}
 </style>
