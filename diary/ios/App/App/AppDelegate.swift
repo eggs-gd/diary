@@ -5,7 +5,6 @@ import FirebaseCore
 private let appGroupId = "group.gd.eggs.diary"
 private let sharedTextKey = "pendingShareText"
 private let pendingSharePreferenceKey = "CapacitorStorage.guanming.pendingShareText"
-private let pasteboardPrefix = "guanming-share-v1:"
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -58,11 +57,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
 private extension AppDelegate {
     func copyPendingShareText() {
-        if copyPendingShareTextFromAppGroup() {
-            return
-        }
-
-        copyPendingShareTextFromPasteboard()
+        copyPendingShareTextFromAppGroup()
     }
 
     @discardableResult
@@ -83,21 +78,4 @@ private extension AppDelegate {
         return true
     }
 
-    func copyPendingShareTextFromPasteboard() {
-        guard
-            let value = UIPasteboard.general.string,
-            value.hasPrefix(pasteboardPrefix)
-        else {
-            return
-        }
-
-        let text = String(value.dropFirst(pasteboardPrefix.count))
-        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return
-        }
-
-        UserDefaults.standard.set(text, forKey: pendingSharePreferenceKey)
-        UserDefaults.standard.synchronize()
-        UIPasteboard.general.string = ""
-    }
 }

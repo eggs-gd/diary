@@ -3,7 +3,6 @@ import UniformTypeIdentifiers
 
 private let appGroupId = "group.gd.eggs.diary"
 private let sharedTextKey = "pendingShareText"
-private let pasteboardPrefix = "guanming-share-v1:"
 private let appScheme = "guanming://share-pending"
 
 final class ShareViewController: UIViewController {
@@ -86,13 +85,10 @@ final class ShareViewController: UIViewController {
     // MARK: – Storage
 
     private func saveText(_ text: String) {
-        // Primary: App Group shared container (requires provisioning)
         if let shared = UserDefaults(suiteName: appGroupId) {
             shared.set(text, forKey: sharedTextKey)
             shared.synchronize()
         }
-        // Fallback: system pasteboard
-        UIPasteboard.general.string = "\(pasteboardPrefix)\(text)"
     }
 
     // MARK: – Open containing app
