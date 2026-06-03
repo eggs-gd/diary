@@ -13,6 +13,7 @@
 	import type { DayReflection, EventEntry, Locale } from '$lib/events/types';
 	import { useI18n } from '$lib/i18n';
 	import { resolveWeekStart } from '$lib/preferences/week-start';
+	import type { DayEndHour } from '$lib/preferences/day-end';
 	import type { WeekStartPreference } from '$lib/preferences/week-start';
 	import { track } from '$lib/analytics';
 	import { hapticLight } from '$lib/platform/native';
@@ -22,10 +23,11 @@
 		entries: EventEntry[];
 		dayReflections: Map<string, DayReflection>;
 		weekStart: WeekStartPreference;
+		dayEndHour?: DayEndHour;
 		onClose: () => void;
 	}
 
-	let { open, entries, dayReflections, weekStart, onClose }: Props = $props();
+	let { open, entries, dayReflections, weekStart, dayEndHour = 0, onClose }: Props = $props();
 
 	const i18n = useI18n();
 
@@ -37,7 +39,7 @@
 	let mode = $state<ExportMode>('report');
 
 	const selectedEntries = $derived(
-		filterEntriesByRange(entries, range, resolveWeekStart(weekStart, i18n.locale))
+		filterEntriesByRange(entries, range, resolveWeekStart(weekStart, i18n.locale), dayEndHour)
 	);
 
 	const rangeOptions: { value: ExportRange; labelKey: string }[] = [
@@ -60,7 +62,7 @@
 		if (!selectedEntries.length) return;
 
 		const md = buildArchiveMarkdown(
-			groupEventEntries(selectedEntries, i18n.locale),
+			groupEventEntries(selectedEntries, i18n.locale, dayEndHour),
 			dayReflections,
 			(k, p) => i18n.t(k, p),
 			i18n.locale as Locale

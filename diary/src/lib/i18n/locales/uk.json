@@ -100,6 +100,10 @@
 		"monday": "Пн",
 		"sunday": "Нд"
 	},
+	"dayEnd": {
+		"label": "Кінець дня",
+		"option": "День закінчується о {time}"
+	},
 	"reflectionFeature": {
 		"label": "Режим",
 		"on": "Режим розбору",

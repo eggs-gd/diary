@@ -68,6 +68,7 @@
 	let insightsEdited = $state(false);
 	let saving = $state(false);
 	let loadedDayKey = $state<string | null>(null);
+	let resizeTrigger = $state(0);
 
 	let nextActionsFocused = $state(false);
 	let insightsFocused = $state(false);
@@ -144,6 +145,22 @@
 		}
 	});
 
+	$effect(() => {
+		if (!open || (!nextActionsFocused && !insightsFocused)) return;
+		void tick().then(() => {
+			requestAnimationFrame(() => {
+				const active = document.activeElement;
+				if (!(active instanceof HTMLElement)) return;
+				active.closest('.day-section')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+			});
+		});
+	});
+
+	function resizeViewport(): void {
+		queueMicrotask(() => {
+			resizeTrigger += 1;
+		});
+	}
 
 	function buildReflection(): DayReflection {
 		const trimmedNextActions = nextActions.trim();
@@ -288,6 +305,8 @@
 	{open}
 	labelledBy="reflection-day-title"
 	showClose={false}
+	keyboardAware
+	onViewportChange={resizeViewport}
 	onClose={() => void back()}
 	{header}
 >
@@ -341,6 +360,7 @@
 						bind:focused={nextActionsFocused}
 						placeholder={i18n.t('analysis.writePlaceholder')}
 						ariaLabel={i18n.t('dayReflection.nextActions')}
+						{resizeTrigger}
 						{editIcon}
 					/>
 				</section>
@@ -352,6 +372,7 @@
 						bind:focused={insightsFocused}
 						placeholder={i18n.t('analysis.writePlaceholder')}
 						ariaLabel={i18n.t('dayReflection.insights')}
+						{resizeTrigger}
 						{editIcon}
 					/>
 				</section>

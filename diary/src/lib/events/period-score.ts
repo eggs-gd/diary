@@ -2,6 +2,7 @@ import { monthKey } from './calendar';
 import { defaultDayScoreFromEntries } from './day-reflection';
 import { localDateKey } from './grouping';
 import type { EventEntry, MonthGroup, YearGroup } from './types';
+import type { DayEndHour } from '$lib/preferences/day-end';
 
 export function averageScores(scores: Array<number | null | undefined>): number | null {
 	const values = scores.filter((score): score is number => score !== null && score !== undefined);
@@ -23,13 +24,19 @@ export function flattenYearEntries(year: YearGroup): EventEntry[] {
 	return year.months.flatMap((month) => flattenMonthEntries(month));
 }
 
-export function medianEventScoreByMonth(entries: EventEntry[]): Map<string, number> {
+export function medianEventScoreByMonth(
+	entries: EventEntry[],
+	dayEndHour: DayEndHour = 0
+): Map<string, number> {
 	const grouped = new Map<string, Map<string, EventEntry[]>>();
 
 	for (const entry of entries) {
 		const date = new Date(entry.createdAt);
+		if (dayEndHour > 0) {
+			date.setHours(date.getHours() - dayEndHour);
+		}
 		const key = monthKey(date.getFullYear(), date.getMonth());
-		const dayKey = localDateKey(entry.createdAt);
+		const dayKey = localDateKey(entry.createdAt, dayEndHour);
 		const month = grouped.get(key) ?? new Map<string, EventEntry[]>();
 		const day = month.get(dayKey) ?? [];
 		day.push(entry);

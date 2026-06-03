@@ -1,8 +1,25 @@
 import type { EventEntry, Locale, YearGroup } from './types';
 import { getLocaleDateFormat } from '$lib/i18n';
+import type { DayEndHour } from '$lib/preferences/day-end';
 
-export function localDateKey(iso: string): string {
-	const d = new Date(iso);
+function adjustedDate(value: string | Date, dayEndHour: DayEndHour = 0): Date {
+	const d = value instanceof Date ? new Date(value) : new Date(value);
+	if (dayEndHour > 0) {
+		d.setHours(d.getHours() - dayEndHour);
+	}
+	return d;
+}
+
+export function localDateKey(iso: string, dayEndHour: DayEndHour = 0): string {
+	const d = adjustedDate(iso, dayEndHour);
+	const y = d.getFullYear();
+	const m = String(d.getMonth() + 1).padStart(2, '0');
+	const day = String(d.getDate()).padStart(2, '0');
+	return `${y}-${m}-${day}`;
+}
+
+export function localDateKeyFromDate(date: Date, dayEndHour: DayEndHour = 0): string {
+	const d = adjustedDate(date, dayEndHour);
 	const y = d.getFullYear();
 	const m = String(d.getMonth() + 1).padStart(2, '0');
 	const day = String(d.getDate()).padStart(2, '0');
@@ -21,8 +38,12 @@ export function formatDayLabel(dayKey: string, locale: Locale): string {
 	});
 }
 
-export function entriesForDay(entries: EventEntry[], dayKey: string): EventEntry[] {
-	return entries.filter((entry) => localDateKey(entry.createdAt) === dayKey);
+export function entriesForDay(
+	entries: EventEntry[],
+	dayKey: string,
+	dayEndHour: DayEndHour = 0
+): EventEntry[] {
+	return entries.filter((entry) => localDateKey(entry.createdAt, dayEndHour) === dayKey);
 }
 
 export function createdAtForDayKey(dayKey: string): string {
@@ -32,7 +53,11 @@ export function createdAtForDayKey(dayKey: string): string {
 	return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 12, 0, 0, 0).toISOString();
 }
 
-export function groupEventEntries(entries: EventEntry[], locale: Locale): YearGroup[] {
+export function groupEventEntries(
+	entries: EventEntry[],
+	locale: Locale,
+	dayEndHour: DayEndHour = 0
+): YearGroup[] {
 	const years: YearGroup[] = [];
 	const yearIndex = new Map<string, YearGroup>();
 	const monthIndex = new Map<string, YearGroup['months'][number]>();
@@ -40,10 +65,10 @@ export function groupEventEntries(entries: EventEntry[], locale: Locale): YearGr
 	const resolvedLocale = getLocaleDateFormat(locale);
 
 	for (const entry of entries) {
-		const date = new Date(entry.createdAt);
+		const date = adjustedDate(entry.createdAt, dayEndHour);
 		const yearKey = String(date.getFullYear());
 		const monthKey = `${yearKey}-${date.getMonth()}`;
-		const dayKey = localDateKey(entry.createdAt);
+		const dayKey = localDateKey(entry.createdAt, dayEndHour);
 
 		let year = yearIndex.get(yearKey);
 		if (!year) {

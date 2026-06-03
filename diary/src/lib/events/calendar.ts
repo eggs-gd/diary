@@ -1,7 +1,8 @@
 import type { DayReflectionCalendarState } from './day-reflection';
 import type { Locale } from './types';
 import type { WeekStart } from '$lib/preferences/week-start';
-import { localDateKey } from './grouping';
+import type { DayEndHour } from '$lib/preferences/day-end';
+import { localDateKey, localDateKeyFromDate } from './grouping';
 import { getLocaleDateFormat } from '$lib/i18n';
 
 export interface CalendarCell {
@@ -10,6 +11,7 @@ export interface CalendarCell {
 	inMonth: boolean;
 	count: number;
 	isToday: boolean;
+	isFuture: boolean;
 	reflectionStatus: DayReflectionCalendarState | null;
 }
 
@@ -17,10 +19,10 @@ function dateKeyFromParts(year: number, month: number, day: number): string {
 	return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
-export function entryCountsByDay(dates: string[]): Map<string, number> {
+export function entryCountsByDay(dates: string[], dayEndHour: DayEndHour = 0): Map<string, number> {
 	const counts = new Map<string, number>();
 	for (const iso of dates) {
-		const key = localDateKey(iso);
+		const key = localDateKey(iso, dayEndHour);
 		counts.set(key, (counts.get(key) ?? 0) + 1);
 	}
 	return counts;
@@ -46,6 +48,7 @@ export function buildMonthCells(
 			inMonth: false,
 			count: 0,
 			isToday: false,
+			isFuture: false,
 			reflectionStatus: null
 		});
 	}
@@ -59,6 +62,7 @@ export function buildMonthCells(
 			inMonth: true,
 			count,
 			isToday: key === todayKey,
+			isFuture: key > todayKey,
 			reflectionStatus: count > 0 ? (reflectionStates.get(key) ?? 'not_started') : null
 		});
 	}
@@ -71,6 +75,7 @@ export function buildMonthCells(
 			inMonth: false,
 			count: 0,
 			isToday: false,
+			isFuture: false,
 			reflectionStatus: null
 		});
 		padIndex += 1;
@@ -124,11 +129,11 @@ export function compareMonths(a: CalendarMonth, b: CalendarMonth): number {
 	return a.year !== b.year ? a.year - b.year : a.month - b.month;
 }
 
-export function calendarMonthBounds(entryDates: string[]): {
+export function calendarMonthBounds(entryDates: string[], dayEndHour: DayEndHour = 0): {
 	start: CalendarMonth;
 	end: CalendarMonth;
 } {
-	const { min, max } = calendarYearBounds(entryDates);
+	const { min, max } = calendarYearBounds(entryDates, dayEndHour);
 	return {
 		start: { year: min, month: 0 },
 		end: { year: max, month: 11 }
@@ -172,13 +177,20 @@ export function monthSelectOptions(locale: Locale): { value: number; label: stri
 	}));
 }
 
-export function calendarYearBounds(entryDates: string[]): { min: number; max: number } {
+export function calendarYearBounds(
+	entryDates: string[],
+	dayEndHour: DayEndHour = 0
+): { min: number; max: number } {
 	const now = new Date().getFullYear();
 	let min = now;
 	let max = now;
 
 	for (const iso of entryDates) {
-		const year = new Date(iso).getFullYear();
+		const date = new Date(iso);
+		if (dayEndHour > 0) {
+			date.setHours(date.getHours() - dayEndHour);
+		}
+		const year = date.getFullYear();
 		min = Math.min(min, year);
 		max = Math.max(max, year);
 	}
@@ -186,6 +198,6 @@ export function calendarYearBounds(entryDates: string[]): { min: number; max: nu
 	return { min: min - 1, max: max + 1 };
 }
 
-export function todayKey(): string {
-	return localDateKey(new Date().toISOString());
+export function todayKey(dayEndHour: DayEndHour = 0): string {
+	return localDateKeyFromDate(new Date(), dayEndHour);
 }

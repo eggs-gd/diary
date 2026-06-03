@@ -24,6 +24,7 @@
 	import { AppIcon } from '$lib/icons';
 	import { useI18n } from '$lib/i18n';
 	import { resolveWeekStart } from '$lib/preferences/week-start';
+	import type { DayEndHour } from '$lib/preferences/day-end';
 	import { useWeekStart } from '$lib/preferences';
 	import { hapticLight } from '$lib/platform/native';
 
@@ -32,6 +33,7 @@
 		entries: EventEntry[];
 		dayReflections: DayReflection[];
 		enableReflection?: boolean;
+		dayEndHour?: DayEndHour;
 		resetView?: boolean;
 		onClose: () => void;
 		onSelectDay: (dayKey: string) => void;
@@ -42,6 +44,7 @@
 		entries,
 		dayReflections,
 		enableReflection = true,
+		dayEndHour = 0,
 		resetView = true,
 		onClose,
 		onSelectDay
@@ -58,20 +61,20 @@
 	const resolvedWeekStart = $derived.by(() => resolveWeekStart(weekStartPreference, i18n.locale));
 
 	const entryDates = $derived(entries.map((entry) => entry.createdAt));
-	const countsByDay = $derived(entryCountsByDay(entryDates));
-	const monthScores = $derived(medianEventScoreByMonth(entries));
+	const countsByDay = $derived(entryCountsByDay(entryDates, dayEndHour));
+	const monthScores = $derived(medianEventScoreByMonth(entries, dayEndHour));
 	const reflectionStateMap = $derived(reflectionCalendarStateByDay(dayReflections));
 	const weekdays = $derived.by(() => weekdayLabels(i18n.locale, resolvedWeekStart));
 	const monthOptions = $derived(monthSelectOptions(i18n.locale));
-	const yearBounds = $derived(calendarYearBounds(entryDates));
-	const monthBounds = $derived(calendarMonthBounds(entryDates));
+	const yearBounds = $derived(calendarYearBounds(entryDates, dayEndHour));
+	const monthBounds = $derived(calendarMonthBounds(entryDates, dayEndHour));
 	const yearOptions = $derived(
 		Array.from(
 			{ length: yearBounds.max - yearBounds.min + 1 },
 			(_, index) => yearBounds.min + index
 		)
 	);
-	const today = todayKey();
+	const today = $derived(todayKey(dayEndHour));
 
 	let calendarRoot = $state<HTMLElement | null>(null);
 	let topSentinel = $state<HTMLElement | null>(null);
@@ -231,7 +234,7 @@
 	}
 
 	function selectDay(cell: CalendarCell): void {
-		if (cell.count === 0) return;
+		if (cell.isFuture) return;
 		onSelectDay(cell.key);
 		void hapticLight();
 	}
@@ -410,11 +413,12 @@
 										type="button"
 										class="calendar-day"
 										class:calendar-day--today={cell.isToday}
+										class:calendar-day--selectable={!cell.isFuture}
 										class:calendar-day--has-entries={cell.count > 0}
 										class:calendar-day--reflection-complete={enableReflection && cell.reflectionStatus === 'complete'}
 										class:calendar-day--reflection-partial={enableReflection && cell.reflectionStatus === 'partial'}
 										class:calendar-day--reflection-not-started={enableReflection && cell.reflectionStatus === 'not_started'}
-										disabled={cell.count === 0}
+										disabled={cell.isFuture}
 										aria-label={dayAriaLabel(cell)}
 										onclick={() => selectDay(cell)}
 									>
@@ -691,13 +695,16 @@
 		min-height: var(--size-touch);
 	}
 
-	.calendar-day--has-entries {
+	.calendar-day--selectable {
 		cursor: pointer;
+	}
+
+	.calendar-day--has-entries {
 		color: var(--text);
 	}
 
-	.calendar-day--has-entries:hover,
-	.calendar-day--has-entries:focus-visible {
+	.calendar-day--selectable:hover,
+	.calendar-day--selectable:focus-visible {
 		background: var(--fill-subtle);
 		outline: none;
 	}

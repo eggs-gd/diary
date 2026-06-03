@@ -6,15 +6,16 @@
 	import ScrollToTop from '$lib/components/ScrollToTop.svelte';
 	import { track } from '$lib/analytics';
 	import { initI18n, useI18n } from '$lib/i18n';
-	import { initReflectionEnabled, initWeekStart } from '$lib/preferences';
+	import { initDayEnd, initReflectionEnabled, initWeekStart } from '$lib/preferences';
 	import { initNativePlatform, teardownNativePlatform } from '$lib/platform/native';
 
 	let { children } = $props();
 
 	initI18n();
 	const i18n = useI18n();
-	initWeekStart();
-	initReflectionEnabled();
+initWeekStart();
+initDayEnd();
+initReflectionEnabled();
 
 	onMount(() => {
 		track('app_open');
@@ -63,7 +64,7 @@
 		display: flex;
 		justify-content: flex-end;
 		padding: 0 calc(0.75rem + env(safe-area-inset-right, 0px))
-			calc(0.75rem + env(safe-area-inset-bottom, 0px)) 0;
+			calc(5.25rem + env(safe-area-inset-bottom, 0px)) 0;
 		pointer-events: none;
 	}
 

@@ -3,15 +3,18 @@
 	import { AppIcon } from '$lib/icons';
 	import { localDateKey } from '$lib/events/grouping';
 	import { useI18n } from '$lib/i18n';
+	import { useDayEnd } from '$lib/preferences';
 	import { eventStore } from '$lib/state/events.svelte';
 	import { dayReflectionStore } from '$lib/state/day-reflections.svelte';
 	import { track } from '$lib/analytics';
 	import ArchivePopup from './ArchivePopup.svelte';
+	import DayEndSwitcher from './DayEndSwitcher.svelte';
 	import LocaleSwitcher from './LocaleSwitcher.svelte';
 	import ReflectionEnabledSwitcher from './ReflectionEnabledSwitcher.svelte';
 	import WeekStartSwitcher from './WeekStartSwitcher.svelte';
 
 	const i18n = useI18n();
+	const dayEnd = useDayEnd();
 	const entries = $derived(eventStore.entries);
 
 	let profileOpen = $state(false);
@@ -69,6 +72,13 @@
 
 		<div class="locale-row">
 			<FieldLabel size="row">
+				<span id="profile-day-end-heading">{i18n.t('dayEnd.label')}</span>
+			</FieldLabel>
+			<DayEndSwitcher labelledBy="profile-day-end-heading" />
+		</div>
+
+		<div class="locale-row">
+			<FieldLabel size="row">
 				<span id="profile-reflection-feature-heading">{i18n.t('reflectionFeature.label')}</span>
 			</FieldLabel>
 			<ReflectionEnabledSwitcher labelledBy="profile-reflection-feature-heading" />
@@ -87,13 +97,15 @@
 	onDelete={async (ids) => {
 		const selected = new Set(ids);
 		const remainingDayKeys = new Set(
-			entries.filter((entry) => !selected.has(entry.id)).map((entry) => localDateKey(entry.createdAt))
+			entries
+				.filter((entry) => !selected.has(entry.id))
+				.map((entry) => localDateKey(entry.createdAt, dayEnd.hour))
 		);
 		const emptyDayKeys = [
 			...new Set(
 				entries
 					.filter((entry) => selected.has(entry.id))
-					.map((entry) => localDateKey(entry.createdAt))
+					.map((entry) => localDateKey(entry.createdAt, dayEnd.hour))
 					.filter((dayKey) => !remainingDayKeys.has(dayKey))
 			)
 		];

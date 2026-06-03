@@ -1,6 +1,7 @@
 import type { DayReflection, EventEntry, Locale, ReflectionProtocol, YearGroup } from './types';
 import { getLocaleDateFormat } from '$lib/i18n';
 import { defaultDayScoreFromEntries } from './day-reflection';
+import type { DayEndHour } from '$lib/preferences/day-end';
 
 type Translator = (key: string, params?: Record<string, string | number>) => string;
 export type ExportRange = 'today' | 'week' | 'month';
@@ -219,9 +220,14 @@ export function archiveFilename(): string {
 	return `attention-journal-${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}.md`;
 }
 
-function startOfToday(): Date {
+function startOfToday(dayEndHour: DayEndHour = 0): Date {
 	const now = new Date();
-	return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+	if (dayEndHour > 0) {
+		now.setHours(now.getHours() - dayEndHour);
+	}
+	const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+	start.setHours(start.getHours() + dayEndHour);
+	return start;
 }
 
 function addDays(date: Date, days: number): Date {
@@ -232,18 +238,21 @@ function addDays(date: Date, days: number): Date {
 
 export function exportBounds(
 	range: ExportRange,
-	firstDayOfWeek: 0 | 1
+	firstDayOfWeek: 0 | 1,
+	dayEndHour: DayEndHour = 0
 ): { start: Date; end: Date } {
-	const today = startOfToday();
+	const today = startOfToday(dayEndHour);
 
 	if (range === 'today') {
 		return { start: today, end: addDays(today, 1) };
 	}
 
 	if (range === 'month') {
+		const logicalToday = new Date(today);
+		logicalToday.setHours(logicalToday.getHours() - dayEndHour);
 		return {
-			start: new Date(today.getFullYear(), today.getMonth(), 1),
-			end: new Date(today.getFullYear(), today.getMonth() + 1, 1)
+			start: new Date(logicalToday.getFullYear(), logicalToday.getMonth(), 1, dayEndHour),
+			end: new Date(logicalToday.getFullYear(), logicalToday.getMonth() + 1, 1, dayEndHour)
 		};
 	}
 
@@ -255,9 +264,10 @@ export function exportBounds(
 export function filterEntriesByRange(
 	entries: EventEntry[],
 	range: ExportRange,
-	firstDayOfWeek: 0 | 1
+	firstDayOfWeek: 0 | 1,
+	dayEndHour: DayEndHour = 0
 ): EventEntry[] {
-	const { start, end } = exportBounds(range, firstDayOfWeek);
+	const { start, end } = exportBounds(range, firstDayOfWeek, dayEndHour);
 	return entries.filter((entry) => {
 		const created = new Date(entry.createdAt);
 		return created >= start && created < end;

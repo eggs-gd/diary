@@ -14,7 +14,7 @@
 	import { useI18n } from '$lib/i18n';
 	import { hapticLight } from '$lib/platform/native';
 	import { initShareIntent } from '$lib/platform/share-intent';
-	import { useReflectionEnabled } from '$lib/preferences';
+	import { useDayEnd, useReflectionEnabled } from '$lib/preferences';
 	import { useWeekStart } from '$lib/preferences/week-start.svelte';
 	import { eventStore } from '$lib/state/events.svelte';
 	import { dayReflectionStore } from '$lib/state/day-reflections.svelte';
@@ -22,12 +22,13 @@
 
 	const i18n = useI18n();
 	const weekStart = useWeekStart();
+	const dayEnd = useDayEnd();
 	const reflection = useReflectionEnabled();
 	const enableReflection = $derived(reflection.enabled);
 	type EventReflectionSource = 'archive' | 'day_reflection';
 
 	const archiveView = $derived(
-		buildArchiveView(eventStore.entries, i18n.locale, dayReflectionStore.byDayKey)
+		buildArchiveView(eventStore.entries, i18n.locale, dayReflectionStore.byDayKey, dayEnd.hour)
 	);
 
 	let captureOpen = $state(false);
@@ -48,7 +49,7 @@
 
 	const reflectionDayEntries = $derived(
 		reflectionDayOpen && reflectionDayKey
-			? entriesForDay(eventStore.entries, reflectionDayKey)
+			? entriesForDay(eventStore.entries, reflectionDayKey, dayEnd.hour)
 			: []
 	);
 
@@ -134,7 +135,7 @@
 		reflectionDayOpen = true;
 		track('day_reflection_opened', {
 			day: dayKey,
-			count: entriesForDay(eventStore.entries, dayKey).length,
+			count: entriesForDay(eventStore.entries, dayKey, dayEnd.hour).length,
 			from: returnTo
 		});
 		void hapticLight();
@@ -155,36 +156,25 @@
 
 <main class="main">
 	<section class="archive" use:trackVisible={{ event: 'archive_viewed' }}>
-		<div class="archive-head">
-			<h2 class="archive-title">{i18n.t('archive.title')}</h2>
-			<div class="archive-actions">
-				{#if enableReflection && eventStore.entries.length > 0}
-					<button
-						type="button"
-						class="archive-icon-btn"
-						aria-label={i18n.t('archive.share')}
-						onclick={openExportSettings}
-					>
-						<AppIcon name="share" />
-					</button>
-				{/if}
+		<div class="archive-actions" aria-label={i18n.t('archive.title')}>
+			{#if enableReflection && eventStore.entries.length > 0}
 				<button
 					type="button"
 					class="archive-icon-btn"
-					aria-label={i18n.t('capture.newEvent')}
-					onclick={() => openCapture()}
+					aria-label={i18n.t('archive.share')}
+					onclick={openExportSettings}
 				>
-					<AppIcon name="add" />
+					<AppIcon name="share" />
 				</button>
-				<button
-					type="button"
-					class="archive-icon-btn"
-					aria-label={i18n.t('archive.openCalendar')}
-					onclick={openCalendar}
-				>
-					<AppIcon name="calendar" />
-				</button>
-			</div>
+			{/if}
+			<button
+				type="button"
+				class="archive-icon-btn"
+				aria-label={i18n.t('archive.openCalendar')}
+				onclick={openCalendar}
+			>
+				<AppIcon name="calendar" />
+			</button>
 		</div>
 
 		{#if eventStore.entries.length === 0}
@@ -198,6 +188,15 @@
 			/>
 		{/if}
 	</section>
+
+	<button
+		type="button"
+		class="archive-add-btn"
+		aria-label={i18n.t('capture.newEvent')}
+		onclick={() => openCapture()}
+	>
+		<AppIcon name="add" />
+	</button>
 </main>
 
 <CaptureEvent
@@ -217,6 +216,7 @@
 	entries={eventStore.entries}
 	dayReflections={enableReflection ? dayReflections : []}
 	{enableReflection}
+	dayEndHour={dayEnd.hour}
 	resetView={calendarResetView}
 	onClose={() => (calendarOpen = false)}
 	onSelectDay={(dayKey) => openDayReflection(dayKey, 'calendar')}
@@ -253,6 +253,7 @@
 		entries={eventStore.entries}
 		dayReflections={dayReflectionStore.byDayKey}
 		weekStart={weekStart.preference}
+		dayEndHour={dayEnd.hour}
 		onClose={() => (exportSettingsOpen = false)}
 	/>
 {/if}
@@ -263,9 +264,9 @@
 		max-width: var(--content-max-width);
 		margin: 0 auto;
 		overflow-x: hidden;
-		padding: calc(var(--space-7) + env(safe-area-inset-top, 0px))
+		padding: calc(var(--space-6) + env(safe-area-inset-top, 0px))
 			calc(var(--space-5) + env(safe-area-inset-right, 0px))
-			calc(var(--space-6) + env(safe-area-inset-bottom, 0px))
+			calc(6.5rem + env(safe-area-inset-bottom, 0px))
 			calc(var(--space-5) + env(safe-area-inset-left, 0px));
 	}
 
@@ -273,28 +274,16 @@
 		margin-bottom: var(--space-7);
 	}
 
-	.archive-head {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: var(--space-3);
-		margin-bottom: var(--space-5);
-	}
-
-	.archive-title {
-		margin: 0;
-		font-size: var(--text-xl);
-		font-weight: 400;
-		text-transform: uppercase;
-		letter-spacing: var(--tracking-wide);
-		color: var(--text-muted);
-	}
-
 	.archive-actions {
+		position: fixed;
+		top: 0;
+		right: 0;
+		z-index: var(--z-chrome);
 		display: flex;
 		align-items: center;
 		gap: var(--space-3);
-		flex-shrink: 0;
+		padding: calc(var(--space-3) + env(safe-area-inset-top, 0px))
+			calc(var(--space-3) + env(safe-area-inset-right, 0px)) 0 0;
 	}
 
 	.archive-icon-btn {
@@ -302,8 +291,8 @@
 		align-items: center;
 		justify-content: center;
 		flex-shrink: 0;
-		width: 1.875rem;
-		height: 1.875rem;
+		width: var(--size-touch);
+		height: var(--size-touch);
 		padding: 0;
 		border: none;
 		background: transparent;
@@ -328,6 +317,38 @@
 		margin-top: var(--space-4);
 		padding: var(--space-5) 0;
 		color: var(--text-muted);
+	}
+
+	.archive-add-btn {
+		position: fixed;
+		right: calc(var(--space-4) + env(safe-area-inset-right, 0px));
+		bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+		z-index: var(--z-chrome);
+		display: grid;
+		place-items: center;
+		width: 3.75rem;
+		height: 3.75rem;
+		padding: 0;
+		border: 1px solid color-mix(in srgb, var(--accent-dim) 48%, var(--border));
+		border-radius: var(--radius-full);
+		background: color-mix(in srgb, var(--bg-elevated) 94%, transparent);
+		box-shadow: var(--shadow-popup);
+		color: var(--text);
+		cursor: pointer;
+		transition: transform var(--transition-interactive), border-color var(--transition-interactive);
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	.archive-add-btn :global(svg.app-icon) {
+		width: 1.75rem;
+		height: 1.75rem;
+	}
+
+	.archive-add-btn:hover,
+	.archive-add-btn:focus-visible {
+		border-color: var(--accent-dim);
+		outline: none;
+		transform: translateY(-1px);
 	}
 
 </style>

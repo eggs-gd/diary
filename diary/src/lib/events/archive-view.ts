@@ -3,6 +3,7 @@ import { getDayReflectionCalendarState, type DayReflectionCalendarState } from '
 import { groupEventEntries } from './grouping';
 import { averageScores, medianEventScore } from './period-score';
 import type { DayReflection, EventEntry, Locale } from './types';
+import type { DayEndHour } from '$lib/preferences/day-end';
 
 export interface ArchiveDayView {
 	key: string;
@@ -30,9 +31,10 @@ export interface ArchiveYearView {
 export function buildArchiveView(
 	entries: EventEntry[],
 	locale: Locale,
-	dayReflections: Map<string, DayReflection>
+	dayReflections: Map<string, DayReflection>,
+	dayEndHour: DayEndHour = 0
 ): ArchiveYearView[] {
-	return groupEventEntries(entries, locale).map((year) => {
+	return groupEventEntries(entries, locale, dayEndHour).map((year) => {
 		const yearDayScores: number[] = [];
 		const months = year.months.map((month) => {
 			const days = month.days.map((day) => {
