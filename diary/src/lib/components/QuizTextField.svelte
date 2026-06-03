@@ -45,11 +45,18 @@
 		});
 	}
 
+	function scrollFieldIntoView(behavior: ScrollBehavior = 'smooth'): void {
+		const target = wrap?.closest<HTMLElement>('.day-section, .report-section, .capture-step') ?? wrap;
+		target?.scrollIntoView({ block: 'center', behavior });
+	}
+
 	$effect(() => {
 		if (!focused) return;
 		requestAnimationFrame(() => {
 			textarea?.focus({ preventScroll: true });
 			queueResize();
+			requestAnimationFrame(() => scrollFieldIntoView());
+			window.setTimeout(() => scrollFieldIntoView(), 180);
 		});
 	});
 
@@ -58,7 +65,12 @@
 		value;
 		focused;
 		resizeTrigger;
-		void tick().then(queueResize);
+		void tick().then(() => {
+			queueResize();
+			if (focused) {
+				requestAnimationFrame(() => scrollFieldIntoView('auto'));
+			}
+		});
 	});
 
 	$effect(() => {

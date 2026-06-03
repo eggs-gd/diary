@@ -64,12 +64,19 @@ initReflectionEnabled();
 		display: flex;
 		justify-content: flex-end;
 		padding: 0 calc(0.75rem + env(safe-area-inset-right, 0px))
-			calc(5.25rem + env(safe-area-inset-bottom, 0px)) 0;
+			calc(6.25rem + env(safe-area-inset-bottom, 0px)) 0;
 		pointer-events: none;
 	}
 
-	.scroll-top-bar :global(.scroll-top-btn) {
+	.scroll-top-bar :global(.icon-btn) {
+		width: 3rem;
+		height: 3rem;
 		pointer-events: auto;
+	}
+
+	.scroll-top-bar :global(.icon-btn svg.app-icon) {
+		width: 1.35rem;
+		height: 1.35rem;
 	}
 
 	.profile-bar {

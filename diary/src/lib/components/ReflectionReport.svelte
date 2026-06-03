@@ -48,6 +48,7 @@
 		view: false,
 		actions: false
 	});
+	let resizeTrigger = $state(0);
 
 	let baselineDraft = $state({
 		event: '',
@@ -147,12 +148,23 @@
 		});
 	}
 
+	function resizeViewport(): void {
+		queueMicrotask(() => {
+			resizeTrigger += 1;
+		});
+	}
+
+	function scrollEventInputIntoView(): void {
+		eventInput?.closest('.report-header')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+	}
+
 	async function focusEventInput(): Promise<void> {
 		editingEvent = true;
 		await tick();
 		requestAnimationFrame(() => {
 			eventInput?.focus({ preventScroll: true });
 			queueEventInputResize();
+			scrollEventInputIntoView();
 		});
 		void hapticLight();
 	}
@@ -260,6 +272,8 @@
 	{open}
 	labelledBy="reflection-report-title"
 	showClose={false}
+	keyboardAware
+	onViewportChange={resizeViewport}
 	onClose={() => void backToArchive()}
 	{header}
 >
@@ -275,6 +289,7 @@
 								bind:focused={fieldFocused[field]}
 								placeholder={i18n.t('analysis.writePlaceholder')}
 								ariaLabel={reflectionLabel(field)}
+								{resizeTrigger}
 								{editIcon}
 							/>
 						</section>
