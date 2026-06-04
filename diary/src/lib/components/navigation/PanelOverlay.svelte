@@ -9,6 +9,7 @@
 		LEFT_EDGE_BACK_PX,
 		PANEL_SLIDE_MS,
 		resolveGestureMode,
+		shouldLockPanelScroll,
 		shouldCommitGesture,
 		type GestureState
 	} from '$lib/navigation/panel-gestures';
@@ -30,6 +31,7 @@
 	let dragPx = $state(0);
 	let animating = $state(false);
 	let gesture = $state<GestureState | null>(null);
+	let scrollLocked = $state(false);
 	let displayIndex = $state(0);
 	let indexSyncPaused = $state(false);
 	let topSlidePx = $state(0);
@@ -206,6 +208,26 @@
 		};
 	});
 
+	$effect(() => {
+		if (!browser || !overlayRoot || !scrollLocked) return;
+		const root = overlayRoot;
+
+		const blockScroll = (event: TouchEvent) => {
+			event.preventDefault();
+		};
+		root.addEventListener('touchmove', blockScroll, { passive: false, capture: true });
+		return () => root.removeEventListener('touchmove', blockScroll, { capture: true });
+	});
+
+	function syncScrollLock(): void {
+		scrollLocked = shouldLockPanelScroll(gesture);
+	}
+
+	function clearGesture(): void {
+		gesture = null;
+		scrollLocked = false;
+	}
+
 	function releaseCapture(): void {
 		if (!gesture?.captured || !trackEl) return;
 		try {
@@ -240,11 +262,13 @@
 			fromLeftEdge
 		});
 
-		if (mode === 'none') {
+		if (!shouldLockPanelScroll(gesture)) {
+			syncScrollLock();
 			dragPx = 0;
 			return;
 		}
 
+		syncScrollLock();
 		event.preventDefault();
 
 		if (mode === 'back' && !gesture.captured) {
@@ -257,6 +281,11 @@
 		if (!gesture.captured && trackEl) {
 			trackEl.setPointerCapture(event.pointerId);
 			gesture.captured = true;
+		}
+
+		if (mode === 'none') {
+			dragPx = 0;
+			return;
 		}
 
 		const dx = event.clientX - gesture.startX;
@@ -297,7 +326,7 @@
 		const hadCapture = gesture.captured;
 
 		releaseCapture();
-		gesture = null;
+		clearGesture();
 
 		if (commit && mode === 'back') {
 			completeBackSwipe(width);
@@ -314,7 +343,7 @@
 		if (!gesture || gesture.pointerId !== event.pointerId) return;
 		const hadCapture = gesture.captured;
 		releaseCapture();
-		gesture = null;
+		clearGesture();
 		if (hadCapture && dragPx !== 0) cancelSwipe();
 		else dragPx = 0;
 	}
@@ -323,6 +352,7 @@
 {#if overlays.length > 0}
 	<div
 		class="panel-overlay"
+		class:panel-overlay--gesture-lock={scrollLocked}
 		bind:this={overlayRoot}
 		style:--panel-slide-duration="{PANEL_SLIDE_MS}ms"
 	>
@@ -365,6 +395,11 @@
 		overflow: hidden;
 		background: transparent;
 		pointer-events: none;
+	}
+
+	.panel-overlay--gesture-lock :global(.panel-slot--active .shell-body) {
+		touch-action: none;
+		overscroll-behavior: none;
 	}
 
 	.panel-overlay-track {

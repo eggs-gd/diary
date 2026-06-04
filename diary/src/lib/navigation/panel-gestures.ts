@@ -21,6 +21,12 @@ export function createGestureState(pointerId: number, x: number, y: number): Ges
 	return { pointerId, startX: x, startY: y, mode: 'none', locked: false, captured: false };
 }
 
+/** True once horizontal axis is chosen — vertical scroll in the panel should stop. */
+export function shouldLockPanelScroll(state: GestureState | null): boolean {
+	if (!state) return false;
+	return state.locked || state.captured || state.mode !== 'none';
+}
+
 /** Elements that should receive taps/clicks without deck gesture handling. */
 export const PANEL_INTERACTIVE_SELECTOR =
 	'input, textarea, select, button, a, label, summary, [role="button"], [role="link"], [contenteditable="true"], [data-no-panel-gesture]';
