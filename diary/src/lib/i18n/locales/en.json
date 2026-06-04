@@ -1,7 +1,7 @@
 {
 	"app": {
 		"title": "Attention Journal",
-		"description": "An attention journal for events, resonance, and later reflection.",
+		"description": "Capture events that matter. Reflect when you're ready.",
 		"scrollToTop": "Top",
 		"tagline": "attention journal"
 	},
@@ -49,14 +49,14 @@
 		"exportContinue": "Continue"
 	},
 	"dayReflection": {
-		"positiveEvents": "Events that delighted me today",
+		"positiveEvents": "Events that brought me joy today",
 		"negativeEvents": "Events that upset me today",
-		"positiveActs": "How I treated myself well today",
-		"negativeActs": "My actions that upset me today",
-		"nextActions": "How will I act next time in these situations to feel less upset?",
-		"insights": "Openings / Insights / Observations",
+		"positiveActs": "What I did that helped me today",
+		"negativeActs": "What I did that made things harder today",
+		"nextActions": "What would I like to change or keep doing?",
+		"insights": "Insights & observations",
 		"dayScore": "Day resonance",
-		"emptySection": "Nothing in the log for this day",
+		"emptySection": "Your first events will appear here.",
 		"addEntry": "Add entry",
 		"save": "Save day reflection"
 	},
@@ -69,7 +69,7 @@
 		"positiveReason": "What delighted you about this?",
 		"positiveAbout": "What does this situation say about you?",
 		"positiveView": "Is there something else here you did not notice at first?",
-		"positiveActions": "How will you act so there are more moments like this?",
+		"positiveActions": "What will you do to create more moments like this?",
 		"edit": "Edit",
 		"prev": "Back",
 		"next": "Next",
