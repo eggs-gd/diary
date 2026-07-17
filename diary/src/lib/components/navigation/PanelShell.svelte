@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import { subscribeVisualViewport } from '@eggs/kit/native';
 	import { browser } from '$app/environment';
-	import { subscribeVisualViewport } from '$lib/platform/keyboard-viewport';
 
 	interface Props {
 		/** Top of stack — effects, keyboard viewport. */

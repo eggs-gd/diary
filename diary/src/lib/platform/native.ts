@@ -1,6 +1,6 @@
 import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
-import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { hapticLight as kitHapticLight } from '@eggs/kit/native';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { applySystemTextZoom, initSystemTextZoom, teardownSystemTextZoom } from './text-scale';
 
@@ -46,13 +46,7 @@ export async function initNativePlatform(onAppBack?: () => void): Promise<void> 
 }
 
 export async function hapticLight(): Promise<void> {
-	if (!Capacitor.isNativePlatform()) return;
-
-	try {
-		await Haptics.impact({ style: ImpactStyle.Light });
-	} catch {
-		// Ignore haptics failures on unsupported devices.
-	}
+	await kitHapticLight();
 }
 
 export function teardownNativePlatform(): void {

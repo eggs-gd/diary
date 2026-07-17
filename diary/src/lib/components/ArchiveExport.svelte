@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Capacitor } from '@capacitor/core';
+	import { shareText, writeClipboardText } from '@eggs/kit/native';
 	import { AppButton, AppFullscreen, AppPopup } from '$lib/components/ui';
 	import { groupEventEntries } from '$lib/events/grouping';
 	import {
@@ -78,21 +78,7 @@
 		void hapticLight();
 		onClose();
 
-		if (
-			Capacitor.isNativePlatform() &&
-			typeof navigator !== 'undefined' &&
-			typeof navigator.share === 'function'
-		) {
-			try {
-				await navigator.share({
-					title: filename,
-					text: payload
-				});
-				return;
-			} catch (err) {
-				if (err instanceof Error && err.name === 'AbortError') return;
-			}
-		}
+		if (await shareText({ title: filename, text: payload })) return;
 
 		previewText = payload;
 		previewFilename = filename;
@@ -116,7 +102,7 @@
 
 	async function copy(): Promise<void> {
 		try {
-			await navigator.clipboard.writeText(previewText);
+			await writeClipboardText(previewText);
 			copied = true;
 			setTimeout(() => (copied = false), 2000);
 		} catch {}

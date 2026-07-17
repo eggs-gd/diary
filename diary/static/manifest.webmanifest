@@ -1,0 +1,27 @@
+{
+	"name": "Attention Journal",
+	"short_name": "Attention",
+	"description": "A quiet archive of attention — capture what happened, return later, and see it more clearly.",
+	"lang": "uk",
+	"dir": "ltr",
+	"start_url": ".",
+	"scope": ".",
+	"display": "standalone",
+	"orientation": "portrait",
+	"background_color": "#0e0d0b",
+	"theme_color": "#0e0d0b",
+	"icons": [
+		{
+			"src": "icons/icon-192.png",
+			"sizes": "192x192",
+			"type": "image/png",
+			"purpose": "any"
+		},
+		{
+			"src": "icons/icon-512.png",
+			"sizes": "512x512",
+			"type": "image/png",
+			"purpose": "any"
+		}
+	]
+}

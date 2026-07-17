@@ -14,6 +14,7 @@
 		"format": "prettier --write .",
 		"assets:generate": "capacitor-assets generate --iconBackgroundColor '#0e0d0b' --splashBackgroundColor '#0e0d0b' --ios --android",
 		"build:mobile": "yarn build && cap sync",
+		"build:pwa": "BASE_PATH=/pwa yarn build && node scripts/deploy-pwa.mjs",
 		"ios": "npx cap open ios",
 		"android": "npx cap open android"
 	},
@@ -37,12 +38,15 @@
 		"@capacitor/android": "^8.3.4",
 		"@capacitor/app": "^8.1.0",
 		"@capacitor/cli": "^8.3.4",
+		"@capacitor/clipboard": "^8.0.1",
 		"@capacitor/core": "^8.3.4",
 		"@capacitor/haptics": "^8.0.2",
 		"@capacitor/ios": "^8.3.4",
 		"@capacitor/preferences": "^8.0.1",
+		"@capacitor/share": "^8.0.1",
 		"@capacitor/status-bar": "^8.0.2",
 		"@capacitor/text-zoom": "^8.0.1",
+		"@eggs/kit": "link:../../eggs.gd-kit",
 		"@lucide/svelte": "^1.17.0",
 		"firebase": "^12.14.0"
 	}

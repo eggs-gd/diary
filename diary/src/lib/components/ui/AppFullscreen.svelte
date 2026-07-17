@@ -1,9 +1,9 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import { subscribeVisualViewport } from '@eggs/kit/native';
 	import { browser } from '$app/environment';
 	import { portalToBody } from '$lib/actions/portal-to-body';
 	import { useI18n } from '$lib/i18n';
-	import { subscribeVisualViewport } from '$lib/platform/keyboard-viewport';
 	import { lockDocumentScroll } from '$lib/platform/scroll-lock';
 	import AppButton from './AppButton.svelte';
 	import { useDialog } from './use-dialog.svelte';
