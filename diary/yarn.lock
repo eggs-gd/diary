@@ -28,6 +28,11 @@
   resolved "https://registry.yarnpkg.com/@capacitor-firebase/analytics/-/analytics-8.2.0.tgz#b52cac7eb856bd2065203b004b32f1cd89141b99"
   integrity sha512-WHXMee80NTduTAHLtNrZdMRpsO/LnV63cMs5c3iK0lSm1lEcnagzpML5IbueqzO92zTjzTP3rZyHy7DHlORr2A==
 
+"@capacitor-firebase/authentication@^8.2.0":
+  version "8.5.1"
+  resolved "https://registry.yarnpkg.com/@capacitor-firebase/authentication/-/authentication-8.5.1.tgz#2fcf7b3889b015c8cb2a6f2fcdfd0bee495315e9"
+  integrity sha512-qOsZ1VmgbdhiNHWxxl3qNEULGhBp1+N3psGq2Bac8lpMsc+gcle/oQGctywEiMJoVyj3wOvngqKJgdyvuZPvsA==
+
 "@capacitor/android@^8.3.4":
   version "8.3.4"
   resolved "https://registry.yarnpkg.com/@capacitor/android/-/android-8.3.4.tgz#9719f46d16eeea1c8e00ba57dff55d8cd2a09140"

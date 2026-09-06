@@ -9,10 +9,23 @@ export interface AuthUser {
 	name: string | null;
 }
 
+const NATIVE_SIGN_IN_TIMEOUT_MS = 20_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+	return Promise.race([
+		promise,
+		new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`${label} timed out`)), ms))
+	]);
+}
+
 /**
- * Google-only sign-in for journal sync. Web uses the Firebase Auth JS SDK
- * (lazy-loaded). Native sign-in is not wired yet — `signIn()` is a no-op there
- * until `@capacitor-firebase/authentication` is added.
+ * Google-only sign-in for journal sync. The Firebase JS SDK holds the session on
+ * every platform (Realtime Database rules read `auth.uid` via the JS SDK). On
+ * native, `@capacitor-firebase/authentication` runs the OS Google flow and we
+ * exchange the id token for a JS-SDK credential.
+ *
+ * Native auth uses `initializeAuth` without a popup/redirect resolver — `getAuth`
+ * would try to load an iframe from `authDomain`, which hangs in the WebView.
  */
 class AuthStore {
 	user = $state<AuthUser | null>(null);
@@ -25,7 +38,11 @@ class AuthStore {
 	#listening = false;
 
 	get available(): boolean {
-		return browser && !!firebaseApp && !Capacitor.isNativePlatform();
+		return browser && !!firebaseApp;
+	}
+
+	get #native(): boolean {
+		return Capacitor.isNativePlatform();
 	}
 
 	#mod(): Promise<typeof import('firebase/auth')> {
@@ -38,16 +55,26 @@ class AuthStore {
 			return null;
 		}
 		if (!this.#auth) {
-			const { getAuth, onAuthStateChanged, getRedirectResult } = await this.#mod();
-			this.#auth = getAuth(firebaseApp!);
+			const m = await this.#mod();
+			this.#auth = this.#native
+				? m.initializeAuth(firebaseApp!, {
+						persistence: [
+							m.indexedDBLocalPersistence,
+							m.browserLocalPersistence,
+							m.inMemoryPersistence
+						]
+					})
+				: m.getAuth(firebaseApp!);
 			if (!this.#listening) {
 				this.#listening = true;
-				onAuthStateChanged(this.#auth, (u) => {
+				m.onAuthStateChanged(this.#auth, (u) => {
 					this.user = u ? { uid: u.uid, email: u.email, name: u.displayName } : null;
 					this.ready = true;
 				});
-				// Resolve a pending redirect sign-in (mobile popup fallback).
-				getRedirectResult(this.#auth).catch(() => {});
+				if (!this.#native) {
+					// Resolve a pending redirect sign-in (mobile web popup fallback).
+					m.getRedirectResult(this.#auth).catch(() => {});
+				}
 			}
 		}
 		return this.#auth;
@@ -60,29 +87,44 @@ class AuthStore {
 	}
 
 	async signIn(): Promise<void> {
-		if (this.busy) return;
-		if (!this.available) return; // TODO: native via @capacitor-firebase/authentication
-
+		if (this.busy || !this.available) return;
 		this.busy = true;
 		try {
 			const auth = await this.#getAuth();
 			if (!auth) return;
-			const { GoogleAuthProvider, signInWithPopup, signInWithRedirect } = await this.#mod();
-			const provider = new GoogleAuthProvider();
+			const m = await this.#mod();
+			const provider = new m.GoogleAuthProvider();
+
+			if (this.#native) {
+				const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
+				const result = await FirebaseAuthentication.signInWithGoogle({ skipNativeAuth: true });
+				const idToken = result.credential?.idToken;
+				if (!idToken) return; // user cancelled
+				console.log('[auth] google id token received, exchanging for JS credential');
+				await withTimeout(
+					m.signInWithCredential(auth, m.GoogleAuthProvider.credential(idToken)),
+					NATIVE_SIGN_IN_TIMEOUT_MS,
+					'signInWithCredential'
+				);
+				console.log('[auth] signInWithCredential ok');
+				track('auth_sign_in', { provider: 'google', method: 'native' });
+				return;
+			}
+
 			try {
-				await signInWithPopup(auth, provider);
+				await m.signInWithPopup(auth, provider);
 				track('auth_sign_in', { provider: 'google', method: 'popup' });
 			} catch (err) {
 				const code = (err as { code?: string })?.code ?? '';
 				if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
-					return; // user dismissed
+					return;
 				}
 				if (
 					code === 'auth/popup-blocked' ||
 					code === 'auth/operation-not-supported-in-this-environment'
 				) {
 					track('auth_sign_in', { provider: 'google', method: 'redirect' });
-					await signInWithRedirect(auth, provider); // navigates away
+					await m.signInWithRedirect(auth, provider);
 					return;
 				}
 				throw err;
@@ -98,6 +140,10 @@ class AuthStore {
 		if (!this.available) return;
 		const auth = await this.#getAuth();
 		if (!auth) return;
+		if (this.#native) {
+			const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
+			await FirebaseAuthentication.signOut().catch(() => {});
+		}
 		const { signOut } = await this.#mod();
 		await signOut(auth);
 		track('auth_sign_out');

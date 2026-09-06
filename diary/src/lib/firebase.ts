@@ -1,10 +1,10 @@
 import { browser } from '$app/environment';
-import { Capacitor } from '@capacitor/core';
 import { initializeApp, type FirebaseApp } from 'firebase/app';
 
 // Web client config. Not secret — the same identifiers ship in the native
-// GoogleService-Info.plist / google-services.json. Native builds initialise
-// Firebase from those bundled files; the web/PWA build needs this explicit call.
+// GoogleService-Info.plist / google-services.json. The native Firebase SDKs
+// initialise from those bundled files; the JS SDK in the webview (used here for
+// Auth + Realtime Database) needs this explicit call on every platform.
 const firebaseConfig = {
 	apiKey: 'AIzaSyAFSh0gu-rYSXBVkq6bNqm88rKhGzE9VNg',
 	authDomain: 'awareness-journal.firebaseapp.com',
@@ -16,12 +16,8 @@ const firebaseConfig = {
 	measurementId: 'G-W7F2PWQ270'
 };
 
-/**
- * Web-only Firebase app. `null` during prerender and on native platforms
- * (native uses its own bundled config).
- */
-export const firebaseApp: FirebaseApp | null =
-	browser && !Capacitor.isNativePlatform() ? initializeApp(firebaseConfig) : null;
+/** JS-SDK Firebase app for the webview (Auth + Realtime Database). `null` during prerender. */
+export const firebaseApp: FirebaseApp | null = browser ? initializeApp(firebaseConfig) : null;
 
 /** Journal sync (Realtime Database) is inert until `databaseURL` is set. */
 export const SYNC_ENABLED = firebaseConfig.databaseURL.length > 0;

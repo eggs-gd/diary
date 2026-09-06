@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CLIENT_ID</key>
+	<string>24354789873-mcgv4ajp63mhspno344sfsg600k4uq36.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.24354789873-mcgv4ajp63mhspno344sfsg600k4uq36</string>
 	<key>API_KEY</key>
 	<string>AIzaSyDQ5VwzTkIaBKekY105SyY0ZEI1d7AOBuk</string>
 	<key>GCM_SENDER_ID</key>
@@ -26,5 +30,7 @@
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
 	<string>1:24354789873:ios:943b110badd044e4f3cc50</string>
+	<key>DATABASE_URL</key>
+	<string>https://awareness-journal-default-rtdb.europe-west1.firebasedatabase.app</string>
 </dict>
 </plist>
