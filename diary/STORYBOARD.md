@@ -1,279 +1,87 @@
-# 觀明 (Guān Míng) — концепція щоденника усвідомленості
+# 觀明 (Guān Míng) — product concept
 
-## Поточний стан
+觀 *observe* + 明 *clarity*. Used as a symbol, not a name or a literal translation.
 
-* Створена пустишка додатку.
-* Створений App Store запис.
-* Створений Firebase проект.
-* Створені репозиторії для додатку та лендингу.
-* Зареєстрований сабдомен: journal.eggs.gd
-* Візуальний стиль успадковується від Shape of Momentum:
-    * темний фон
-    * мінімалізм
-    * відсутність зайвого UI
-    * атмосфера спокою
-    * один довгий потік замість багатьох екранів
+Visual style is inherited from Shape of Momentum: dark ground, minimal UI, calm, one long
+flow instead of many screens.
 
-## Логотип:
+## The reframe
 
-觀明
+It started as a diary. In use it became clear the value is not in the diary — it is in
+helping a person see:
 
-## Ідея:
+- what happened
+- the story they told themselves about it
+- whether another story could also be true
 
-Спостереження + Ясність
+So the product is closer to a **reflection companion** than a journal app, and its core
+unit is an **event**, not a diary entry. The app is an **archive of attention**: quick
+captures — voice notes, thoughts, forwarded messages, quotes, context — that you return to
+later.
 
-Логотип використовується як символ, а не як буквальний переклад чи назва додатку.
+## Capture first, reflect later
 
-⸻
+Do not make the person reflect at the moment something happens. First just collect events:
+one button, one dictation, save, done.
 
-## Головне відкриття
+> Someone cut me off on the road today and I was angry for an hour.
 
-Початкова ідея була зробити щоденник.
+Later they come back to the event and can analyse it, reframe it, go deeper.
 
-Але в процесі стало зрозуміло, що цінність не в щоденнику.
+## The reflection
 
-Цінність у допомозі людині побачити:
+The full therapeutic protocol (event → negative reading → doubt → positive reading → plan,
+plus happiness / self-respect / insight blocks) works, but it is too heavy for daily use —
+even for the author. The shipped form is deliberately short:
 
-* що сталося
-* яку історію вона собі про це розповіла
-* чи існує інша інтерпретація
+- **Event reflection** — four questions (what stirred you, what it says about you, other
+  perspectives, how you'll act next time), phrased for the event's resonance.
+- **Day reflection** — events grouped by joy / upset / helped / made-harder, then what to
+  change or keep, free insights, a day resonance.
 
-Тобто продукт ближчий до:
+The constant risk: digitising a therapeutic practice tends to lose the result, lose the
+atmosphere, and turn the process into filling in a form. Every addition is weighed against
+that.
 
-reflection companion
+## The self-respect finding
 
-ніж до:
+Unexpectedly, the strongest block was not event analysis or cognitive distortions — it was
+self-respect:
 
-journal app
+- what today weakened me (acts I respect myself less for)
+- what today strengthened me (acts I respect myself more for)
 
-⸻
+After a few days of this, you start repeating the second list and avoiding the first
+without extra motivation. This is why entries carry a **kind** — *event* (happened to you)
+vs *act* (something you did).
 
-## Початковий терапевтичний протокол
+## Relationship with Shape of Momentum
 
-Повна версія виглядала приблизно так:
+Two related instruments, not separate products:
 
-1. Подія
-2. Негативна інтерпретація
-3. Негативний внутрішній діалог
-4. Сумнів
-5. Позитивний внутрішній діалог
-6. Позитивна інтерпретація
-7. Про що хвилювався
-8. Чому хвилювався
-9. Позитивна інтерпретація
-10. План дій
+- **Shape of Momentum** — *what is the shape of this moment?* — looks outward, at the form
+  of the event.
+- **觀明** — *what do I actually think about this moment?* — looks inward, at the form of
+  perception.
 
-Плюс блоки:
+## Deep-link concept (aspirational)
 
-* рівень щастя
-* самоповага
-* інсайти
+Support the system share sheet: any content — a message, an email, a note, a reminder, a
+task — can be forwarded into the app and becomes part of personal context.
 
-⸻
+## MVP hypothesis
 
-## Головний висновок
+Not a big diary. Not a CBT system. Not therapy. The simplest possible tool:
 
-Повний протокол працює.
+1. capture an event
+2. return to it later
+3. see it more clearly
 
-Але він занадто важкий.
+Everything else can appear gradually.
 
-Навіть для автора.
+## Open work
 
-У повсякденному використанні потрібна значно коротша форма.
-
-⸻
-
-## Потенційна коротка модель
-
-### Варіант 1
-
-1. Що сталося?
-2. Яку історію я собі про це розказав?
-3. Яка ще історія може бути правдою?
-4. Що я зроблю далі?
-
-⸻
-
-### Варіант 2
-
-1. Подія
-2. Негативна інтерпретація
-3. Сумнів
-4. Позитивна інтерпретація
-5. План дій
-
-⸻
-
-## Найцінніша частина всього фреймворку
-
-Неочікувано найсильнішим виявився блок самоповаги.
-
-Не аналіз подій.
-
-Не когнітивні викривлення.
-
-Саме самоповага.
-
-⸻
-
-### Самоповага
-
-Що сьогодні послаблювало мене?
-
-Список дій після яких я менше себе поважаю.
-
-Що сьогодні зміцнювало мене?
-
-Список дій після яких я більше себе поважаю.
-
-⸻
-
-### Спостереження:
-
-Після декількох днів такого журналу автоматично хочеться:
-
-* повторювати дії з другого списку
-* уникати дій з першого списку
-
-Без додаткової мотивації.
-
-⸻
-
-## Найбільша проблема
-
-Терапевтичні практики добре працюють на папері.
-
-Але поки незрозуміло як оцифрувати їх так, щоб:
-
-* не втратити результат
-* не втратити атмосферу
-* не перетворити процес на заповнення форми
-
-⸻
-
-## Найцікавіша ідея на поточний момент
-
-Не змушувати людину робити рефлексію одразу.
-
-Спочатку лише збирати події.
-
-⸻
-
-## Швидке захоплення події
-
-Одна кнопка.
-
-Один диктант.
-
-Приклад:
-
-Мене сьогодні підрізали на дорозі і я ще годину ходив злий.
-
-Зберегти.
-
-Все.
-
-⸻
-
-## Пізніше людина повертається до події.
-
-І лише тоді може:
-
-* проаналізувати
-* переосмислити
-* розібрати глибше
-
-⸻
-
-## Нова концепція
-
-Додаток може бути не щоденником.
-
-А архівом уваги.
-
-⸻
-
-## У стрічку можуть потрапляти:
-
-* швидкі голосові нотатки
-* думки
-* задачі
-* нагадування
-* переслані повідомлення
-* листи
-* цитати
-* контекст
-
-⸻
-
-## Тобто головна сутність:
-
-Подія
-
-а не
-
-Запис щоденника
-
-⸻
-
-## Deep Link концепція
-
-Ідея підтримати системний Share.
-
-Будь-який контент можна переслати в додаток:
-
-* повідомлення
-* email
-* нотатку
-* нагадування
-* задачу
-
-Все стає частиною особистого контексту.
-
-⸻
-
-## Взаємозв’язок з Shape of Momentum
-
-Shape of Momentum:
-
-Яка форма цього моменту?
-
-дивиться назовні.
-
-⸻
-
-## 觀明:
-
-Що я насправді думаю про цей момент?
-
-дивиться всередину.
-
-⸻
-
-## Це не окремі випадкові продукти.
-
-Це два споріднені інструменти.
-
-Один про форму події.
-
-Другий про форму сприйняття.
-
-⸻
-
-## Поточна гіпотеза MVP
-
-Не будувати великий щоденник.
-
-Не будувати систему CBT.
-
-Не будувати терапію.
-
-Побудувати максимально простий інструмент:
-
-1. Зафіксувати подію.
-2. Повернутися до неї пізніше.
-3. Побачити її ясніше.
-
-Все інше може з’явитися поступово.
-
-Мені найбільш перспективною зараз здається саме ідея “архіву уваги”, а не щоденника. Вона набагато краще стикується і з твоїм власним стилем мислення, і з діплінками, і з голосовими нотатками, і з подальшим AI-аналізом. Це вже виглядає як окремий продукт, а не чергова варіація Day One.
+- Journal sync across devices (Google sign-in → Firebase Realtime Database, opt-in,
+  local-first stays the default). Web Firebase `initializeApp` — which also revives web
+  analytics — lands with it.
+- System share intake on native.

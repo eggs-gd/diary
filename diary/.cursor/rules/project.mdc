@@ -1,0 +1,7 @@
+---
+description: Canonical project agent instructions
+alwaysApply: true
+---
+
+The canonical agent instructions for this repo are in @AGENTS.md — read and follow that
+file. Key point: this is a **PWA-first** project (see AGENTS.md → Golden rule).
