@@ -81,7 +81,7 @@ Everything else can appear gradually.
 
 ## Open work
 
-- Journal sync across devices (Google sign-in → Firebase Realtime Database, opt-in,
-  local-first stays the default). Web Firebase `initializeApp` — which also revives web
-  analytics — lands with it.
+- Journal sync across devices — done for web/PWA (Google sign-in → Firebase Realtime
+  Database, opt-in, local-first stays the default). Details: `docs/sync.md`. Still open:
+  native sign-in, optional E2E encryption.
 - System share intake on native.

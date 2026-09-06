@@ -90,7 +90,11 @@ place of line/column; an ambiguous name returns candidates.
     `src/lib/state/day-reflections.svelte.ts`.
 - Storage: `src/lib/storage/` — `event-*` and `day-reflection-*` repositories, each
   `local` (web `localStorage`, keys `guanming.*`) + `sqlite` (native, DB `guanming`),
-  behind an interface; `storage/index.ts` is the facade.
+  behind an interface; `storage/index.ts` is the facade. Deletes write tombstones
+  (`tombstones.ts`), kept forever.
+- Auth + journal sync: `src/lib/state/auth.svelte.ts`, `src/lib/sync/`. Both collections,
+  LWW by `updatedAt`, one-shot sync, **no live listeners by design** —
+  [`docs/sync.md`](./docs/sync.md).
 - Navigation: `src/lib/navigation/` — an iOS-like stacked-panel system (`panel-stack.ts`,
   `PanelDeck`), not routes. `src/routes/+page.svelte` is the only screen.
 - i18n: `src/lib/i18n/` — uk (default) + en, runes store.

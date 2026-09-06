@@ -1,6 +1,5 @@
 import { Capacitor } from '@capacitor/core';
-import type { DayReflection } from '$lib/events/types';
-import type { EventEntry } from '$lib/events/types';
+import type { DayReflection, EventEntry, Tombstone } from '$lib/events/types';
 import { LocalDayReflectionRepository } from './day-reflection-local';
 import type { DayReflectionRepository } from './day-reflection-repository';
 import { SqliteDayReflectionRepository } from './day-reflection-sqlite';
@@ -38,6 +37,11 @@ export async function loadEventEntries(): Promise<EventEntry[]> {
 	return getRepository().loadAll();
 }
 
+export async function loadEventTombstones(): Promise<Tombstone[]> {
+	await ensureEventsReady();
+	return getRepository().loadTombstones();
+}
+
 export async function saveEventEntry(entry: EventEntry): Promise<void> {
 	await ensureEventsReady();
 	await getRepository().save(entry);
@@ -53,6 +57,14 @@ export async function clearEventEntries(): Promise<void> {
 	await getRepository().clear();
 }
 
+export async function replaceEventEntries(
+	entries: EventEntry[],
+	tombstones: Tombstone[]
+): Promise<void> {
+	await ensureEventsReady();
+	await getRepository().replace(entries, tombstones);
+}
+
 export async function ensureDayReflectionsReady(): Promise<void> {
 	await getDayReflectionRepository().ensureReady();
 }
@@ -60,6 +72,11 @@ export async function ensureDayReflectionsReady(): Promise<void> {
 export async function loadDayReflections(): Promise<DayReflection[]> {
 	await ensureDayReflectionsReady();
 	return getDayReflectionRepository().loadAll();
+}
+
+export async function loadDayReflectionTombstones(): Promise<Tombstone[]> {
+	await ensureDayReflectionsReady();
+	return getDayReflectionRepository().loadTombstones();
 }
 
 export async function saveDayReflection(reflection: DayReflection): Promise<void> {
@@ -75,4 +92,12 @@ export async function deleteDayReflections(dayKeys: string[]): Promise<void> {
 export async function clearDayReflections(): Promise<void> {
 	await ensureDayReflectionsReady();
 	await getDayReflectionRepository().clear();
+}
+
+export async function replaceDayReflections(
+	reflections: DayReflection[],
+	tombstones: Tombstone[]
+): Promise<void> {
+	await ensureDayReflectionsReady();
+	await getDayReflectionRepository().replace(reflections, tombstones);
 }

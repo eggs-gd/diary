@@ -14,3 +14,4 @@ bun.lockb
 /ios/App/App/Assets.xcassets/
 /ios/App/App/GoogleService-Info.plist
 STORYBOARD.md
+/docs/

@@ -148,12 +148,15 @@ Agent instructions and MCP setup: [`AGENTS.md`](AGENTS.md) (canonical; `CLAUDE.m
 
 ---
 
-## Analytics
+## Sync & analytics
 
-`track(name, params?)` in `src/lib/analytics.ts`. Native → `@capacitor-firebase/analytics`
-(bundled `GoogleService-Info.plist` / `google-services.json`). Firebase project
-`awareness-journal`. Web analytics needs an explicit `initializeApp` on the client, which
-lands with journal sync (see [`STORYBOARD.md`](STORYBOARD.md) → open work).
+Optional cross-device sync — Google sign-in → Firebase Realtime Database, opt-in,
+local-first stays the default. Covers both collections (LWW by `updatedAt`), one-shot, no
+live listeners. Deletes leave tombstones. Full write-up: [`docs/sync.md`](docs/sync.md).
+
+`track(name, params?)` in `src/lib/analytics.ts` — native via
+`@capacitor-firebase/analytics`, web via `firebase/analytics` (lazy, `isSupported()`),
+both initialised from `src/lib/firebase.ts`. Firebase project `awareness-journal`.
 
 ---
 

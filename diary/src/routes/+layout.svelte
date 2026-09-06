@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import ScrollToTop from '$lib/components/ScrollToTop.svelte';
@@ -8,21 +8,39 @@
 	import { initDayEnd, initReflectionEnabled, initWeekStart } from '$lib/preferences';
 	import { initNativePlatform, teardownNativePlatform } from '$lib/platform/native';
 	import { handleAppBack } from '$lib/navigation/navigation-host.svelte';
+	import { authStore } from '$lib/state/auth.svelte';
+	import { syncController } from '$lib/sync/controller.svelte';
 
 	let { children } = $props();
 
 	initI18n();
 	const i18n = useI18n();
-initWeekStart();
-initDayEnd();
-initReflectionEnabled();
+	initWeekStart();
+	initDayEnd();
+	initReflectionEnabled();
+
+	// Start / stop sync as the user signs in and out.
+	$effect(() => {
+		const signedIn = !!authStore.user;
+		untrack(() => (signedIn ? syncController.start() : syncController.stop()));
+	});
 
 	onMount(() => {
 		track('app_open');
+		authStore.init();
 		void initNativePlatform(() => {
 			handleAppBack();
 		});
-		return () => teardownNativePlatform();
+
+		const onVisible = () => {
+			if (document.visibilityState === 'visible') syncController.resumeSync();
+		};
+		document.addEventListener('visibilitychange', onVisible);
+
+		return () => {
+			document.removeEventListener('visibilitychange', onVisible);
+			teardownNativePlatform();
+		};
 	});
 </script>
 
@@ -73,5 +91,4 @@ initReflectionEnabled();
 		width: 1.35rem;
 		height: 1.35rem;
 	}
-
 </style>

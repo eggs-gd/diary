@@ -12,7 +12,23 @@ export interface EventEntry {
 	score: number;
 	kind: EventKind;
 	createdAt: string;
+	/** Bumped on every save (incl. reflection edits). Stamped by the store;
+	 * absent on legacy entries — treat as `createdAt`. */
+	updatedAt?: string;
 	protocol?: ReflectionProtocol;
+}
+
+/** Record of a deleted entry/day, kept forever so deletions survive sync and logout. */
+export interface Tombstone {
+	/** Event `id` or reflection `dayKey`. */
+	key: string;
+	deletedAt: string;
+}
+
+/** Full state of one collection, used for local ↔ remote merges. */
+export interface CollectionSnapshot<T> {
+	items: T[];
+	tombstones: Tombstone[];
 }
 
 export interface ReflectionProtocol {

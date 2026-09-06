@@ -1,12 +1,20 @@
 import { Preferences } from '@capacitor/preferences';
-import type { DayReflection } from '$lib/events/types';
+import type { DayReflection, Tombstone } from '$lib/events/types';
 import { LocalDayReflectionRepository } from './day-reflection-local';
 import {
 	DAY_REFLECTIONS_MIGRATED_KEY,
 	DAY_REFLECTIONS_STORAGE_KEY,
 	type DayReflectionRepository
 } from './day-reflection-repository';
-import { getAppDatabase } from './event-sqlite';
+import {
+	getAppDatabase,
+	readTombstoneTable,
+	replaceTombstoneTable,
+	writeTombstones
+} from './event-sqlite';
+import { mergeTombstones, tombstonesFor } from './tombstones';
+
+const TABLE = 'day_reflection_tombstones';
 
 type DayReflectionRow = {
 	day_key: string;
@@ -59,13 +67,16 @@ async function migrateFromLocalStorage(
 
 	const local = new LocalDayReflectionRepository();
 	const reflections = await local.loadAll();
+	const tombstones = await local.loadTombstones();
 
 	for (const reflection of reflections) {
 		await insertReflection(database, reflection);
 	}
+	await writeTombstones(database, TABLE, tombstones);
 
 	if (typeof localStorage !== 'undefined') {
 		localStorage.removeItem(DAY_REFLECTIONS_STORAGE_KEY);
+		localStorage.removeItem('guanming.day-reflection-tombstones.v1');
 	}
 
 	await Preferences.set({ key: DAY_REFLECTIONS_MIGRATED_KEY, value: 'true' });
@@ -96,6 +107,11 @@ export class SqliteDayReflectionRepository implements DayReflectionRepository {
 		return rows.map(rowToReflection);
 	}
 
+	async loadTombstones(): Promise<Tombstone[]> {
+		const database = await getAppDatabase();
+		return readTombstoneTable(database, TABLE);
+	}
+
 	async save(reflection: DayReflection): Promise<void> {
 		const database = await getAppDatabase();
 		await insertReflection(database, reflection);
@@ -103,14 +119,25 @@ export class SqliteDayReflectionRepository implements DayReflectionRepository {
 
 	async deleteByDayKeys(dayKeys: string[]): Promise<void> {
 		if (dayKeys.length === 0) return;
-
 		const database = await getAppDatabase();
 		const placeholders = dayKeys.map(() => '?').join(', ');
 		await database.run(`DELETE FROM day_reflections WHERE day_key IN (${placeholders})`, dayKeys);
+		await writeTombstones(database, TABLE, tombstonesFor(dayKeys, new Date().toISOString()));
 	}
 
 	async clear(): Promise<void> {
 		const database = await getAppDatabase();
+		const dayKeys = (await this.loadAll()).map((r) => r.dayKey);
 		await database.execute(`DELETE FROM day_reflections`);
+		await writeTombstones(database, TABLE, tombstonesFor(dayKeys, new Date().toISOString()));
+	}
+
+	async replace(reflections: DayReflection[], tombstones: Tombstone[]): Promise<void> {
+		const database = await getAppDatabase();
+		await database.execute(`DELETE FROM day_reflections`);
+		for (const reflection of reflections) {
+			await insertReflection(database, reflection);
+		}
+		await replaceTombstoneTable(database, TABLE, mergeTombstones(tombstones));
 	}
 }
