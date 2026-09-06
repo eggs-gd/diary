@@ -42,6 +42,8 @@
 		"exportToday": "За сьогодні",
 		"exportWeek": "За поточний тиждень",
 		"exportMonth": "За поточний місяць",
+		"exportFrom": "Від",
+		"exportTo": "До",
 		"exportMode": "Формат",
 		"exportModeReport": "Звіт",
 		"exportModeAgent": "Інструкції для агента",

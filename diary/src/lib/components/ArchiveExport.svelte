@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { shareText, writeClipboardText } from '@eggs/kit/native';
 	import { AppButton, AppFullscreen, AppPopup } from '$lib/components/ui';
 	import { groupEventEntries } from '$lib/events/grouping';
@@ -6,10 +7,12 @@
 		archiveFilename,
 		buildAgentPrompt,
 		buildArchiveMarkdown,
+		exportBounds,
 		filterEntriesByRange,
 		type ExportMode,
 		type ExportRange
 	} from '$lib/events/export';
+	import { localDateKeyFromDate } from '$lib/events/grouping';
 	import type { DayReflection, EventEntry, Locale } from '$lib/events/types';
 	import { useI18n } from '$lib/i18n';
 	import { resolveWeekStart } from '$lib/preferences/week-start';
@@ -38,8 +41,43 @@
 	let range = $state<ExportRange>('today');
 	let mode = $state<ExportMode>('report');
 
+	const todayKey = $derived(localDateKeyFromDate(new Date(), dayEndHour));
+	let customStart = $state('');
+	let customEnd = $state('');
+
+	/** The date-field values a preset resolves to (end clamped to today). */
+	function presetKeys(value: ExportRange): { start: string; end: string } {
+		const bounds = exportBounds(value, resolveWeekStart(weekStart, i18n.locale), dayEndHour);
+		const lastDay = new Date(bounds.end.getTime() - 1);
+		const start = localDateKeyFromDate(bounds.start, dayEndHour);
+		let end = localDateKeyFromDate(lastDay, dayEndHour);
+		if (end > todayKey) end = todayKey;
+		return { start, end };
+	}
+
+	function selectPreset(value: ExportRange): void {
+		range = value;
+		const keys = presetKeys(value);
+		customStart = keys.start;
+		customEnd = keys.end;
+	}
+
+	function pickCustom(which: 'start' | 'end', value: string): void {
+		if (which === 'start') customStart = value;
+		else customEnd = value;
+		range = 'custom';
+	}
+
+	// Reset to a sane default whenever the popup is reopened.
+	$effect(() => {
+		if (open) untrack(() => selectPreset('today'));
+	});
+
 	const selectedEntries = $derived(
-		filterEntriesByRange(entries, range, resolveWeekStart(weekStart, i18n.locale), dayEndHour)
+		filterEntriesByRange(entries, range, resolveWeekStart(weekStart, i18n.locale), dayEndHour, {
+			start: customStart,
+			end: customEnd
+		})
 	);
 
 	const rangeOptions: { value: ExportRange; labelKey: string }[] = [
@@ -111,6 +149,7 @@
 
 <AppPopup
 	{open}
+	size="wide"
 	title={i18n.t('archive.exportSettingsTitle')}
 	titleId="archive-export-settings-title"
 	onClose={closeSettings}
@@ -128,11 +167,33 @@
 							class="export-segment"
 							class:active={range === option.value}
 							aria-pressed={range === option.value}
-							onclick={() => (range = option.value)}
+							onclick={() => selectPreset(option.value)}
 						>
 							{i18n.t(option.labelKey)}
 						</button>
 					{/each}
+				</div>
+
+				<div class="export-custom">
+					<label class="export-custom__field">
+						<span>{i18n.t('archive.exportFrom')}</span>
+						<input
+							type="date"
+							max={customEnd}
+							value={customStart}
+							oninput={(e) => pickCustom('start', e.currentTarget.value)}
+						/>
+					</label>
+					<label class="export-custom__field">
+						<span>{i18n.t('archive.exportTo')}</span>
+						<input
+							type="date"
+							min={customStart}
+							max={todayKey}
+							value={customEnd}
+							oninput={(e) => pickCustom('end', e.currentTarget.value)}
+						/>
+					</label>
 				</div>
 			</section>
 
@@ -162,7 +223,11 @@
 	{/snippet}
 
 	{#snippet footer()}
-		<AppButton variant="primary" disabled={selectedEntries.length === 0} onclick={() => void exportArchive()}>
+		<AppButton
+			variant="primary"
+			disabled={selectedEntries.length === 0}
+			onclick={() => void exportArchive()}
+		>
 			{i18n.t('archive.exportContinue')}
 		</AppButton>
 	{/snippet}
@@ -219,6 +284,66 @@
 
 	.export-segmented.two {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.export-custom {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: var(--space-2);
+		margin-top: var(--space-1);
+	}
+
+	.export-custom__field {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-1);
+		min-width: 0;
+		color: var(--text-faint);
+		font-size: var(--text-xs);
+		font-weight: 500;
+		text-transform: uppercase;
+		letter-spacing: var(--tracking-wide);
+	}
+
+	.export-custom input {
+		width: 100%;
+		min-width: 0;
+		min-height: var(--size-touch);
+		padding: 0 var(--space-2);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: var(--bg-elevated);
+		color: var(--text);
+		font: inherit;
+		font-size: var(--text-sm);
+		text-transform: none;
+		letter-spacing: normal;
+		transition: var(--transition-interactive);
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	.export-custom input::-webkit-datetime-edit {
+		padding: 0;
+	}
+
+	.export-custom input::-webkit-calendar-picker-indicator {
+		cursor: pointer;
+		opacity: 0.55;
+	}
+
+	.export-custom input:hover {
+		border-color: var(--accent-dim);
+	}
+
+	.export-custom input:focus-visible {
+		outline: none;
+		border-color: var(--accent-dim);
+	}
+
+	@media (max-width: 22rem) {
+		.export-custom {
+			grid-template-columns: 1fr;
+		}
 	}
 
 	.export-segment {

@@ -87,6 +87,10 @@
 		outline: none;
 	}
 
+	.popup.wide {
+		width: min(calc(var(--content-max-width) * 1.1), calc(100dvw - 2rem));
+	}
+
 	.popup:not([open]) {
 		display: none;
 	}

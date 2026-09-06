@@ -42,6 +42,8 @@
 		"exportToday": "Today",
 		"exportWeek": "Current week",
 		"exportMonth": "Current month",
+		"exportFrom": "From",
+		"exportTo": "To",
 		"exportMode": "Format",
 		"exportModeReport": "Report",
 		"exportModeAgent": "Agent instructions",

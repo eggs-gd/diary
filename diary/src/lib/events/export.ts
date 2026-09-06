@@ -4,8 +4,20 @@ import { defaultDayScoreFromEntries } from './day-reflection';
 import type { DayEndHour } from '$lib/preferences/day-end';
 
 type Translator = (key: string, params?: Record<string, string | number>) => string;
-export type ExportRange = 'today' | 'week' | 'month';
+export type ExportRange = 'today' | 'week' | 'month' | 'custom';
 export type ExportMode = 'report' | 'agent';
+
+/** Inclusive `YYYY-MM-DD` bounds for the `custom` range. */
+export interface CustomRange {
+	start: string;
+	end: string;
+}
+
+function parseDayKey(value: string | undefined): { y: number; m: number; d: number } | null {
+	const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value ?? '');
+	if (!match) return null;
+	return { y: Number(match[1]), m: Number(match[2]) - 1, d: Number(match[3]) };
+}
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -20,11 +32,7 @@ function line(label: string, value: string | undefined): string {
 
 // ─── Event protocol block ────────────────────────────────────────────────────
 
-function protocolBlock(
-	protocol: ReflectionProtocol,
-	entryScore: number,
-	t: Translator
-): string {
+function protocolBlock(protocol: ReflectionProtocol, entryScore: number, t: Translator): string {
 	const p = entryScore <= 0 ? 'negative' : 'positive';
 
 	const rows = [
@@ -85,8 +93,7 @@ export function buildArchiveMarkdown(
 	const dateLocale = getLocaleDateFormat(locale);
 	const totalEntries = years.reduce(
 		(sum, y) =>
-			sum +
-			y.months.reduce((ms, m) => ms + m.days.reduce((ds, d) => ds + d.entries.length, 0), 0),
+			sum + y.months.reduce((ms, m) => ms + m.days.reduce((ds, d) => ds + d.entries.length, 0), 0),
 		0
 	);
 	const exportedAt = new Date().toLocaleDateString(dateLocale, {
@@ -239,9 +246,20 @@ function addDays(date: Date, days: number): Date {
 export function exportBounds(
 	range: ExportRange,
 	firstDayOfWeek: 0 | 1,
-	dayEndHour: DayEndHour = 0
+	dayEndHour: DayEndHour = 0,
+	custom?: CustomRange
 ): { start: Date; end: Date } {
 	const today = startOfToday(dayEndHour);
+
+	if (range === 'custom') {
+		const a = parseDayKey(custom?.start);
+		const b = parseDayKey(custom?.end);
+		if (!a || !b) return { start: today, end: today }; // nothing selected yet
+		let lo = new Date(a.y, a.m, a.d, dayEndHour);
+		let hi = new Date(b.y, b.m, b.d, dayEndHour);
+		if (lo > hi) [lo, hi] = [hi, lo];
+		return { start: lo, end: addDays(hi, 1) }; // end date inclusive
+	}
 
 	if (range === 'today') {
 		return { start: today, end: addDays(today, 1) };
@@ -265,9 +283,11 @@ export function filterEntriesByRange(
 	entries: EventEntry[],
 	range: ExportRange,
 	firstDayOfWeek: 0 | 1,
-	dayEndHour: DayEndHour = 0
+	dayEndHour: DayEndHour = 0,
+	custom?: CustomRange
 ): EventEntry[] {
-	const { start, end } = exportBounds(range, firstDayOfWeek, dayEndHour);
+	const { start, end } = exportBounds(range, firstDayOfWeek, dayEndHour, custom);
+	if (start >= end) return [];
 	return entries.filter((entry) => {
 		const created = new Date(entry.createdAt);
 		return created >= start && created < end;
