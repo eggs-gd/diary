@@ -7,6 +7,7 @@
 	import type { ArchiveYearView } from '$lib/events/archive-view';
 	import { getReflectionStatus } from '$lib/events/reflection-status';
 	import { normalizeEventKind, type EventEntry, type EventKind } from '$lib/events/types';
+	import { AppIcon } from '$lib/icons';
 	import { getLocaleDateFormat, useI18n } from '$lib/i18n';
 
 	interface Props {
@@ -14,9 +15,16 @@
 		enableReflection?: boolean;
 		onOpenDay: (dayKey: string) => void;
 		onOpenEntry: (entry: EventEntry) => void;
+		onShareEntry: (entry: EventEntry) => void;
 	}
 
-	let { archiveView, enableReflection = true, onOpenDay, onOpenEntry }: Props = $props();
+	let {
+		archiveView,
+		enableReflection = true,
+		onOpenDay,
+		onOpenEntry,
+		onShareEntry
+	}: Props = $props();
 
 	const i18n = useI18n();
 
@@ -33,7 +41,11 @@
 		return map[state];
 	}
 
-	function dayActionLabel(dayLabel: string, count: number, state: DayReflectionCalendarState): string {
+	function dayActionLabel(
+		dayLabel: string,
+		count: number,
+		state: DayReflectionCalendarState
+	): string {
 		if (enableReflection) return dayReflectionActionLabel(dayLabel, count, state);
 		return `${dayLabel}: ${count}`;
 	}
@@ -42,7 +54,10 @@
 		return kind === 'act' ? i18n.t('capture.kindAct') : i18n.t('capture.kindEvent');
 	}
 
-	function entryActionLabel(entry: EventEntry, reflectStatus: ReturnType<typeof getReflectionStatus>): string {
+	function entryActionLabel(
+		entry: EventEntry,
+		reflectStatus: ReturnType<typeof getReflectionStatus>
+	): string {
 		if (!enableReflection) return entry.text;
 		return reflectActionLabel(reflectStatus, (k) => i18n.t(k));
 	}
@@ -70,11 +85,7 @@
 							<button
 								type="button"
 								class="day-head-card"
-								aria-label={dayActionLabel(
-									day.label,
-									day.entries.length,
-									day.reflectionState
-								)}
+								aria-label={dayActionLabel(day.label, day.entries.length, day.reflectionState)}
 								onclick={() => onOpenDay(day.key)}
 							>
 								<h5 class="group-day-label" id="journal-day-{day.key}">{day.label}</h5>
@@ -93,18 +104,29 @@
 								{#each day.entries as entry (entry.id)}
 									{@const reflectStatus = getReflectionStatus(entry)}
 									<li>
-										<ReflectEntryCard
-											{entry}
-											{reflectStatus}
-											actionLabel={entryActionLabel(entry, reflectStatus)}
-											showReflection={enableReflection}
-											kindLabel={eventKindLabel(normalizeEventKind(entry.kind))}
-											timeLabel={new Date(entry.createdAt).toLocaleTimeString(
-												getLocaleDateFormat(i18n.locale),
-												{ hour: '2-digit', minute: '2-digit' }
-											)}
-											onOpen={() => onOpenEntry(entry)}
-										/>
+										<div class="entry-row">
+											<ReflectEntryCard
+												{entry}
+												{reflectStatus}
+												actionLabel={entryActionLabel(entry, reflectStatus)}
+												showReflection={enableReflection}
+												kindLabel={eventKindLabel(normalizeEventKind(entry.kind))}
+												timeLabel={new Date(entry.createdAt).toLocaleTimeString(
+													getLocaleDateFormat(i18n.locale),
+													{ hour: '2-digit', minute: '2-digit' }
+												)}
+												onOpen={() => onOpenEntry(entry)}
+											/>
+											<button
+												type="button"
+												class="entry-share"
+												aria-label={i18n.t('archive.shareToIChing')}
+												title={i18n.t('archive.shareToIChing')}
+												onclick={() => onShareEntry(entry)}
+											>
+												<AppIcon name="share" />
+											</button>
+										</div>
 									</li>
 								{/each}
 							</ul>
@@ -254,6 +276,48 @@
 
 	.entries li:last-child :global(.reflect-entry) {
 		border-bottom: none;
+	}
+
+	.entry-row {
+		display: flex;
+		align-items: stretch;
+		gap: var(--space-2);
+	}
+
+	.entry-row :global(.reflect-entry) {
+		flex: 1;
+		min-width: 0;
+	}
+
+	.entry-share {
+		flex-shrink: 0;
+		align-self: center;
+		display: grid;
+		place-items: center;
+		width: 2rem;
+		height: 2rem;
+		padding: 0;
+		border: none;
+		border-radius: var(--radius-full);
+		background: transparent;
+		color: var(--text-faint);
+		cursor: pointer;
+		transition:
+			color var(--transition-interactive),
+			background var(--transition-interactive);
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	.entry-share:hover,
+	.entry-share:focus-visible {
+		color: var(--text);
+		background: var(--fill-subtle);
+		outline: none;
+	}
+
+	.entry-share :global(svg.app-icon) {
+		width: 1rem;
+		height: 1rem;
 	}
 
 	@media (max-width: 24rem) {

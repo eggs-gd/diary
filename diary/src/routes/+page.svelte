@@ -17,6 +17,7 @@
 	import { buildArchiveView } from '$lib/events/archive-view';
 	import type { EventEntry } from '$lib/events/types';
 	import { useI18n } from '$lib/i18n';
+	import { shareEventToIching } from '$lib/integrations/iching';
 	import { hapticLight } from '$lib/platform/native';
 	import { initShareIntent } from '$lib/platform/share-intent';
 	import { useDayEnd, useReflectionEnabled } from '$lib/preferences';
@@ -134,6 +135,17 @@
 			score: entry.score,
 			filledFields: protocolFilledCount(entry.protocol),
 			enableReflection
+		});
+		void hapticLight();
+	}
+
+	function shareEntryToIChing(entry: EventEntry): void {
+		// Forwards the event text into the I Ching PWA via the CORE-144 `?q`
+		// deeplink contract. Read-only: never mutates or persists the entry.
+		const shared = shareEventToIching(entry.text);
+		track('event_shared_to_iching', {
+			shared,
+			textLength: entry.text.trim().length
 		});
 		void hapticLight();
 	}
@@ -261,6 +273,7 @@
 						{enableReflection}
 						onOpenDay={(dayKey) => openDayReflection(dayKey)}
 						onOpenEntry={(entry) => openAnalysis(entry)}
+						onShareEntry={(entry) => shareEntryToIChing(entry)}
 					/>
 				{/if}
 			</section>
@@ -398,5 +411,4 @@
 		padding: var(--space-5) 0;
 		color: var(--text-muted);
 	}
-
 </style>
