@@ -1,7 +1,4 @@
-import {
-	dayReflectionActionIcon,
-	type DayReflectionCalendarState
-} from './day-reflection';
+import { dayReflectionActionIcon, type DayReflectionCalendarState } from './day-reflection';
 import {
 	getReflectionStatus,
 	reflectStatusIcon,

@@ -30,10 +30,7 @@ export function protocolFieldLabel(
 	return t(`analysis.${prefix}${capitalize(field)}`);
 }
 
-export function reflectActionLabel(
-	status: ReflectionStatus,
-	t: (key: string) => string
-): string {
+export function reflectActionLabel(status: ReflectionStatus, t: (key: string) => string): string {
 	const map: Record<ReflectionStatus, string> = {
 		empty: t('archive.reflectEmpty'),
 		partial: t('archive.reflectPartial'),

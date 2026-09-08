@@ -12,8 +12,4 @@ export {
 	type WeekStart,
 	type WeekStartPreference
 } from './week-start';
-export {
-	DAY_END_OPTIONS,
-	formatDayEndHour,
-	type DayEndHour
-} from './day-end';
+export { DAY_END_OPTIONS, formatDayEndHour, type DayEndHour } from './day-end';

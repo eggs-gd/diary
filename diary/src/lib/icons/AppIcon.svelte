@@ -14,7 +14,13 @@
 	const Icon = $derived(ICONS[name]);
 </script>
 
-<Icon class={['app-icon', className]} {size} {strokeWidth} color="currentColor" aria-hidden="true" />
+<Icon
+	class={['app-icon', className]}
+	{size}
+	{strokeWidth}
+	color="currentColor"
+	aria-hidden="true"
+/>
 
 <style>
 	:global(svg.app-icon) {

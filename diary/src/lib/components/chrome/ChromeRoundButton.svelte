@@ -20,14 +20,7 @@
 	}: Props = $props();
 </script>
 
-<button
-	{type}
-	class="chrome-round-btn"
-	class:expanded
-	aria-label={label}
-	{disabled}
-	onclick={onclick}
->
+<button {type} class="chrome-round-btn" class:expanded aria-label={label} {disabled} {onclick}>
 	<AppIcon name={icon} />
 </button>
 

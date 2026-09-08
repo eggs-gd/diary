@@ -57,7 +57,9 @@
 		letter-spacing: var(--tracking-wide);
 		text-transform: uppercase;
 		cursor: pointer;
-		transition: border-color var(--transition-interactive), color var(--transition-interactive);
+		transition:
+			border-color var(--transition-interactive),
+			color var(--transition-interactive);
 		-webkit-tap-highlight-color: transparent;
 	}
 

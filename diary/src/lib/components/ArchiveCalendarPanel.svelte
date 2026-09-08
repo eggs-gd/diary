@@ -420,7 +420,7 @@
 </script>
 
 {#snippet chrome()}
-	<PanelChromeBar onBack={onBack} />
+	<PanelChromeBar {onBack} />
 {/snippet}
 
 {#snippet weekdayRow()}
@@ -432,7 +432,11 @@
 {/snippet}
 
 {#snippet footerChrome()}
-	<div class="chrome-float-bottom chrome-float-bottom--spread" role="toolbar" aria-label={i18n.t('archive.openCalendar')}>
+	<div
+		class="chrome-float-bottom chrome-float-bottom--spread"
+		role="toolbar"
+		aria-label={i18n.t('archive.openCalendar')}
+	>
 		<div class="calendar-float-group calendar-float-group--pickers">
 			<select
 				class="calendar-select calendar-select--year"
@@ -505,9 +509,12 @@
 										class:calendar-day--today={cell.isToday}
 										class:calendar-day--selectable={!cell.isFuture}
 										class:calendar-day--has-entries={cell.count > 0}
-										class:calendar-day--reflection-complete={enableReflection && cell.reflectionStatus === 'complete'}
-										class:calendar-day--reflection-partial={enableReflection && cell.reflectionStatus === 'partial'}
-										class:calendar-day--reflection-not-started={enableReflection && cell.reflectionStatus === 'not_started'}
+										class:calendar-day--reflection-complete={enableReflection &&
+											cell.reflectionStatus === 'complete'}
+										class:calendar-day--reflection-partial={enableReflection &&
+											cell.reflectionStatus === 'partial'}
+										class:calendar-day--reflection-not-started={enableReflection &&
+											cell.reflectionStatus === 'not_started'}
 										disabled={cell.isFuture}
 										aria-label={dayAriaLabel(cell)}
 										onclick={() => selectDay(cell)}
@@ -516,11 +523,17 @@
 										{#if !enableReflection && cell.count > 0}
 											<span class="calendar-day__mark" aria-hidden="true"></span>
 										{:else if cell.reflectionStatus === 'complete'}
-											<span class="calendar-day__check calendar-day__check--complete" aria-hidden="true">
+											<span
+												class="calendar-day__check calendar-day__check--complete"
+												aria-hidden="true"
+											>
 												<AppIcon name="check" />
 											</span>
 										{:else if cell.reflectionStatus === 'partial'}
-											<span class="calendar-day__check calendar-day__check--partial" aria-hidden="true">
+											<span
+												class="calendar-day__check calendar-day__check--partial"
+												aria-hidden="true"
+											>
 												<AppIcon name="check" />
 											</span>
 										{:else if cell.reflectionStatus === 'not_started'}

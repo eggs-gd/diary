@@ -9,7 +9,10 @@ export interface PickerDot {
 
 export const SCORE_MIN = -10;
 export const SCORE_MAX = 10;
-export const PICKER_VALUES = Array.from({ length: SCORE_MAX - SCORE_MIN + 1 }, (_, index) => SCORE_MIN + index);
+export const PICKER_VALUES = Array.from(
+	{ length: SCORE_MAX - SCORE_MIN + 1 },
+	(_, index) => SCORE_MIN + index
+);
 
 export function clampScore(value: number): number {
 	return Math.min(SCORE_MAX, Math.max(SCORE_MIN, Math.round(value)));

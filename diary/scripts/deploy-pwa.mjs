@@ -28,7 +28,9 @@ if (!(await exists(source))) {
 
 const siteStatic = resolve(target, '..');
 if (!(await exists(siteStatic))) {
-	console.error(`✗ Site static dir not found at ${siteStatic}. Is diary-site checked out next to diary?`);
+	console.error(
+		`✗ Site static dir not found at ${siteStatic}. Is diary-site checked out next to diary?`
+	);
 	process.exit(1);
 }
 

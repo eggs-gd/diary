@@ -158,7 +158,9 @@
 		border: none;
 		border-radius: var(--radius-full);
 		pointer-events: auto;
-		transition: background var(--duration) var(--ease), transform var(--duration) var(--ease);
+		transition:
+			background var(--duration) var(--ease),
+			transform var(--duration) var(--ease);
 	}
 
 	.score-picker-dot:disabled {

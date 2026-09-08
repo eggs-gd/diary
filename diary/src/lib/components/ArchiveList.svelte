@@ -7,7 +7,6 @@
 	import type { ArchiveYearView } from '$lib/events/archive-view';
 	import { getReflectionStatus } from '$lib/events/reflection-status';
 	import { normalizeEventKind, type EventEntry, type EventKind } from '$lib/events/types';
-	import { AppIcon } from '$lib/icons';
 	import { getLocaleDateFormat, useI18n } from '$lib/i18n';
 
 	interface Props {
@@ -124,7 +123,7 @@
 												title={i18n.t('archive.shareToIChing')}
 												onclick={() => onShareEntry(entry)}
 											>
-												<AppIcon name="share" />
+												<span class="entry-share__glyph" aria-hidden="true">易</span>
 											</button>
 										</div>
 									</li>
@@ -315,9 +314,10 @@
 		outline: none;
 	}
 
-	.entry-share :global(svg.app-icon) {
-		width: 1rem;
-		height: 1rem;
+	.entry-share__glyph {
+		font-family: var(--font-serif);
+		font-size: 1.125rem;
+		line-height: 1;
 	}
 
 	@media (max-width: 24rem) {

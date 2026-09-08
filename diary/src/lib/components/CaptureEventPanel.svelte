@@ -86,7 +86,9 @@
 	}
 
 	function resizeViewport(): void {
-		queueMicrotask(() => { resizeTrigger += 1; });
+		queueMicrotask(() => {
+			resizeTrigger += 1;
+		});
 	}
 
 	async function persist(andAnother: boolean): Promise<void> {
@@ -150,12 +152,7 @@
 			return;
 		}
 		focusKey;
-		resetForm(
-			initialText,
-			initialKind,
-			initialScore,
-			initialCreatedAt ?? null
-		);
+		resetForm(initialText, initialKind, initialScore, initialCreatedAt ?? null);
 		void tick().then(() => {
 			void focusInput({ haptic: false });
 		});
@@ -223,7 +220,6 @@
 				<div class:invalid-control={validationAnimating && scoreMissing}>
 					<ScorePicker bind:value={score} ariaLabel={i18n.t('capture.resonance')} />
 				</div>
-
 			</section>
 
 			<div class="capture-gap" aria-hidden="true"></div>
@@ -323,5 +319,4 @@
 			transform: scale(1.18);
 		}
 	}
-
 </style>

@@ -48,7 +48,9 @@ export function reflectionCalendarStateByDay(
 }
 
 export function completedReflectionDayKeys(reflections: DayReflection[]): Set<string> {
-	return new Set(reflections.filter(isDayReflectionComplete).map((reflection) => reflection.dayKey));
+	return new Set(
+		reflections.filter(isDayReflectionComplete).map((reflection) => reflection.dayKey)
+	);
 }
 
 export interface DayReflectionDraft {

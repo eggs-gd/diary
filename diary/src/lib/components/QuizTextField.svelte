@@ -46,7 +46,8 @@
 	}
 
 	function scrollFieldIntoView(behavior: ScrollBehavior = 'smooth'): void {
-		const target = wrap?.closest<HTMLElement>('.day-section, .report-section, .capture-step') ?? wrap;
+		const target =
+			wrap?.closest<HTMLElement>('.day-section, .report-section, .capture-step') ?? wrap;
 		target?.scrollIntoView({ block: 'center', behavior });
 	}
 

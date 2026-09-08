@@ -210,12 +210,14 @@
 	}}
 />
 
-<svelte:window onkeydown={(event) => {
-	if (event.key === 'Escape' && open) {
-		event.preventDefault();
-		closeDrawer();
-	}
-}} />
+<svelte:window
+	onkeydown={(event) => {
+		if (event.key === 'Escape' && open) {
+			event.preventDefault();
+			closeDrawer();
+		}
+	}}
+/>
 
 <style>
 	.profile-edge {
@@ -267,14 +269,18 @@
 		transform: translateX(-100%);
 		pointer-events: none;
 		visibility: hidden;
-		transition: transform 280ms cubic-bezier(0.32, 0.72, 0, 1), visibility 0s linear 280ms;
+		transition:
+			transform 280ms cubic-bezier(0.32, 0.72, 0, 1),
+			visibility 0s linear 280ms;
 		touch-action: pan-y;
 	}
 
 	.profile-drawer--interactive {
 		pointer-events: auto;
 		visibility: visible;
-		transition: transform 280ms cubic-bezier(0.32, 0.72, 0, 1), visibility 0s;
+		transition:
+			transform 280ms cubic-bezier(0.32, 0.72, 0, 1),
+			visibility 0s;
 	}
 
 	.profile-drawer--dragging {

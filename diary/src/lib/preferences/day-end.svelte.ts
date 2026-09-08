@@ -2,12 +2,7 @@ import { browser } from '$app/environment';
 import { Capacitor } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
 import { getContext, setContext } from 'svelte';
-import {
-	DAY_END_STORAGE_KEY,
-	detectDayEndHour,
-	parseDayEndHour,
-	type DayEndHour
-} from './day-end';
+import { DAY_END_STORAGE_KEY, detectDayEndHour, parseDayEndHour, type DayEndHour } from './day-end';
 
 const DAY_END_KEY = Symbol('dayEnd');
 

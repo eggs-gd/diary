@@ -50,7 +50,15 @@ export function createdAtForDayKey(dayKey: string): string {
 	const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
 	if (!match) return new Date().toISOString();
 
-	return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 12, 0, 0, 0).toISOString();
+	return new Date(
+		Number(match[1]),
+		Number(match[2]) - 1,
+		Number(match[3]),
+		12,
+		0,
+		0,
+		0
+	).toISOString();
 }
 
 export function groupEventEntries(

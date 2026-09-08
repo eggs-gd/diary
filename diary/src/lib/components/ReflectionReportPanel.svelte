@@ -12,7 +12,11 @@
 	import { hapticLight } from '$lib/platform/native';
 	import { track } from '$lib/analytics';
 	import { protocolFieldLabel } from '$lib/events/format';
-	import { getReflectionStatus, protocolFilledCount, shouldSaveReflectionScore } from '$lib/events/reflection-status';
+	import {
+		getReflectionStatus,
+		protocolFilledCount,
+		shouldSaveReflectionScore
+	} from '$lib/events/reflection-status';
 	import { resizeTextareaToContent } from '$lib/utils/resize-quiz-textarea';
 
 	const protocolFields = ['reason', 'about', 'view', 'actions'] as const;
@@ -28,7 +32,15 @@
 		onPersist: (entry: EventEntry) => Promise<void>;
 	}
 
-	let { isTop, visible, entry, source = 'archive', enableReflection = true, onBack, onPersist }: Props = $props();
+	let {
+		isTop,
+		visible,
+		entry,
+		source = 'archive',
+		enableReflection = true,
+		onBack,
+		onPersist
+	}: Props = $props();
 
 	const i18n = useI18n();
 
@@ -305,14 +317,15 @@
 				{/if}
 
 				<section class="report-section report-section--score" aria-labelledby="report-resonance">
-					<h2 class="quiz-question" id="report-resonance">{i18n.t('analysis.resonanceQuestion')}</h2>
+					<h2 class="quiz-question" id="report-resonance">
+						{i18n.t('analysis.resonanceQuestion')}
+					</h2>
 					<EventKindSwitcher bind:value={eventKind} />
 					<ScorePicker
 						bind:value={reflectionScore}
 						ariaLabel={i18n.t('analysis.resonanceQuestion')}
 					/>
 				</section>
-
 			</article>
 		{/if}
 	{/snippet}
@@ -394,5 +407,4 @@
 		line-height: var(--leading-tight);
 		color: var(--text);
 	}
-
 </style>

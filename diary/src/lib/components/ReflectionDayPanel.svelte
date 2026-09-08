@@ -172,8 +172,7 @@
 			dayKey,
 			nextActions: trimmedNextActions,
 			insights: trimmedInsights,
-			nextActionsEdited:
-				nextActionsEdited || trimmedNextActions !== baselineNextActions.trim(),
+			nextActionsEdited: nextActionsEdited || trimmedNextActions !== baselineNextActions.trim(),
 			insightsEdited: insightsEdited || trimmedInsights !== baselineInsights.trim(),
 			updatedAt: new Date().toISOString()
 		};
@@ -235,7 +234,6 @@
 		void hapticLight();
 	}
 
-
 	function openEntry(entry: EventEntry): void {
 		track('day_reflection_entry_opened', {
 			day: dayKey,
@@ -294,7 +292,9 @@
 						{entry}
 						{reflectStatus}
 						variant="compact"
-						actionLabel={enableReflection ? reflectActionLabel(reflectStatus, (k) => i18n.t(k)) : entry.text}
+						actionLabel={enableReflection
+							? reflectActionLabel(reflectStatus, (k) => i18n.t(k))
+							: entry.text}
 						showReflection={enableReflection}
 						onOpen={() => openEntry(entry)}
 					/>
@@ -316,11 +316,7 @@
 		<article class="day-reflection">
 			<header class="day-header">
 				<h1 id="reflection-day-title" class="day-header__title">{dayLabel}</h1>
-				<ScorePicker
-					value={dayScore}
-					ariaLabel={i18n.t('dayReflection.dayScore')}
-					readonly
-				/>
+				<ScorePicker value={dayScore} ariaLabel={i18n.t('dayReflection.dayScore')} readonly />
 			</header>
 
 			<section class="day-section day-section--entries" aria-labelledby="day-positive-events">
@@ -498,5 +494,4 @@
 	.day-list__item:first-child :global(.reflect-entry) {
 		padding-top: 0;
 	}
-
 </style>

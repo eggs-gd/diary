@@ -27,7 +27,11 @@ export function resizeTextareaToContent(el: HTMLTextAreaElement): void {
 export function resizeQuizTextarea(
 	el: HTMLTextAreaElement,
 	wrap: HTMLDivElement,
-	{ minLines = 2, bufferLines = 1, hiddenClass = 'quiz-input--hidden' }: ResizeQuizTextareaOptions = {}
+	{
+		minLines = 2,
+		bufferLines = 1,
+		hiddenClass = 'quiz-input--hidden'
+	}: ResizeQuizTextareaOptions = {}
 ): void {
 	const hidden = el.classList.contains(hiddenClass);
 

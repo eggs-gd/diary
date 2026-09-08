@@ -32,7 +32,9 @@
 
 	const entryKind = $derived(normalizeEventKind(entry.kind));
 	const displayIcon = $derived(eventReflectionDisplayIcon(reflectStatus));
-	const displayScore = $derived(showReflection ? entry.score : (entry.protocol?.reflectionScore ?? entry.score));
+	const displayScore = $derived(
+		showReflection ? entry.score : (entry.protocol?.reflectionScore ?? entry.score)
+	);
 	const reflectedScore = $derived(showReflection ? entry.protocol?.reflectionScore : undefined);
 </script>
 
@@ -67,11 +69,7 @@
 	{:else}
 		<p class="reflect-entry__text">{entry.text}</p>
 		<div class="reflect-entry__dots">
-			<ScoreDots
-				compact
-				original={displayScore}
-				reflected={reflectedScore}
-			/>
+			<ScoreDots compact original={displayScore} reflected={reflectedScore} />
 		</div>
 		{#if showReflection && displayIcon}
 			<ReflectStatusIcon name={displayIcon} />
