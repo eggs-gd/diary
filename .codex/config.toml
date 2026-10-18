@@ -1,0 +1,21 @@
+# MCP for Codex. Instructions stay in AGENTS.md at the repository root.
+# `App` and `Site` are relative to that root. Loaded only when this project is trusted.
+
+[mcp_servers.svelte]
+command = "npx"
+args = ["-y", "@sveltejs/mcp"]
+
+[mcp_servers.design-patterns]
+command = "sh"
+args = [
+  "-c",
+  "AGENTS_TOOLS_DIR=\"${AGENTS_TOOLS_DIR:-$HOME/.agents}\"; exec env DATABASE_PATH=\"$AGENTS_TOOLS_DIR/design_patterns_mcp/data/design-patterns.db\" node \"$AGENTS_TOOLS_DIR/design_patterns_mcp/dist/mcp-server.js\"",
+]
+
+[mcp_servers.ts-language]
+command = "npx"
+args = ["-y", "ts-language-mcp", "--name", "app", "App"]
+
+[mcp_servers.ts-language-site]
+command = "npx"
+args = ["-y", "ts-language-mcp", "--name", "site", "Site"]

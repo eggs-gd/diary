@@ -1,0 +1,23 @@
+{
+	"mcpServers": {
+		"svelte": {
+			"command": "npx",
+			"args": ["-y", "@sveltejs/mcp"]
+		},
+		"design-patterns": {
+			"command": "sh",
+			"args": [
+				"-c",
+				"AGENTS_TOOLS_DIR=\"${AGENTS_TOOLS_DIR:-$HOME/.agents}\"; exec env DATABASE_PATH=\"$AGENTS_TOOLS_DIR/design_patterns_mcp/data/design-patterns.db\" node \"$AGENTS_TOOLS_DIR/design_patterns_mcp/dist/mcp-server.js\""
+			]
+		},
+		"ts-language": {
+			"command": "npx",
+			"args": ["-y", "ts-language-mcp", "--name", "app", "App"]
+		},
+		"ts-language-site": {
+			"command": "npx",
+			"args": ["-y", "ts-language-mcp", "--name", "site", "Site"]
+		}
+	}
+}
