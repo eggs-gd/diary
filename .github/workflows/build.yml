@@ -1,0 +1,66 @@
+name: Build
+
+# Reusable: builds the app, copies it into the site, builds the site and uploads the Pages artifact.
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # App depends on link:../../eggs.gd-kit, which sits outside this repo.
+      # eggs.gd-kit is public, so the default token is enough.
+      - name: Checkout kit
+        uses: actions/checkout@v4
+        with:
+          repository: eggs-gd/eggs.gd-kit
+          ref: main
+          path: vendor/eggs.gd-kit
+
+      - name: Link kit where App expects it
+        run: ln -s "$GITHUB_WORKSPACE/vendor/eggs.gd-kit" "$(dirname "$GITHUB_WORKSPACE")/eggs.gd-kit"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: yarn
+          cache-dependency-path: |
+            App/yarn.lock
+            Site/yarn.lock
+            vendor/eggs.gd-kit/yarn.lock
+
+      # The kit imports @capacitor/* from its own directory, so it needs its own node_modules.
+      - name: Install kit dependencies
+        working-directory: vendor/eggs.gd-kit
+        run: yarn install --frozen-lockfile
+
+      - name: Install app dependencies
+        working-directory: App
+        run: yarn install --frozen-lockfile
+
+      - name: Build app
+        working-directory: App
+        run: yarn build:pwa
+
+      - name: Copy app into the site
+        run: node scripts/deploy-pwa.mjs
+
+      - name: Install site dependencies
+        working-directory: Site
+        run: yarn install --frozen-lockfile
+
+      - name: Build site
+        working-directory: Site
+        run: yarn build
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: Site/build
