@@ -1,0 +1,16 @@
+name: CI
+
+on:
+  # No path filter: a required check skipped by one would block merging docs-only PRs.
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
