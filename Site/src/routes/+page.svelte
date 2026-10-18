@@ -3,7 +3,7 @@
 
 	const features = [
 		'One-tap capture of any event',
-		'System share sheet — send messages, notes and quotes straight in',
+		'On iOS and Android, the system share sheet sends messages, notes and quotes straight in',
 		'Return later to reflect and reinterpret',
 		'Gentle self-respect and reflection prompts',
 		'Personal archive with calendar view',
@@ -60,7 +60,8 @@
 
 		<p>
 			While Shape of Momentum looks outward at the form of a moment, 觀明 looks inward at the form
-			of perception. Everything stays on your device, in one calm stream.
+			of perception. Your archive stays on your device by default, in one calm stream. Optional
+			sync can mirror it to your other signed-in devices.
 		</p>
 
 		<p class="closing">
