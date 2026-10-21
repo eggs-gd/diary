@@ -30,6 +30,8 @@ with the PWA in mind first. See [docs/platform.md](./docs/platform.md).
   next to the app; no secret is needed.
 - Prettier: tabs, single quotes, no trailing comma, width 100. Run `yarn format` before
   finishing. `STORYBOARD.md` is prettier-ignored on purpose.
+- SEO, head metadata, sitemap, footer and cross-links for `Site/` follow the spec in
+  [eggs-gd/eggs.gd-site `docs/seo.md`](https://github.com/eggs-gd/eggs.gd-site/blob/main/docs/seo.md).
 - Don't commit or push unless asked — propose the change, let the maintainer push.
 
 ## MCP servers

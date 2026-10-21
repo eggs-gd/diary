@@ -303,3 +303,25 @@ footer a:hover,
 		width: 100%;
 	}
 }
+
+/* Consent banner colours (the component reads --consent-*). */
+:root {
+	--consent-bg: var(--bg-elevated);
+	--consent-text: var(--text);
+	--consent-muted: var(--text-soft);
+	--consent-border: var(--accent-dim);
+	--consent-accent: var(--accent);
+}
+
+footer .cookie-link {
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--accent);
+	font: inherit;
+	cursor: pointer;
+}
+
+footer .cookie-link:hover {
+	color: var(--text);
+}

@@ -5,7 +5,7 @@
 
 <Seo
 	title="Privacy Policy · Attention Journal"
-	description="Privacy Policy for Attention Journal. Last updated: September 2026."
+	description="Privacy Policy for Attention Journal. Last updated: October 2026."
 	path="/privacy"
 />
 
@@ -14,7 +14,7 @@
 
 	<article class="policy">
 		<h1>Privacy Policy</h1>
-		<p class="updated">Last updated: September 2026</p>
+		<p class="updated">Last updated: October 2026</p>
 
 		<p>Attention Journal respects your privacy.</p>
 
@@ -40,9 +40,20 @@
 		<h2>Analytics</h2>
 
 		<p>
-			The app uses Firebase Analytics to collect anonymous usage statistics. This information helps
-			improve the app and may include events such as app launches, screen views, and feature usage.
-			No personally identifiable information is collected through analytics.
+			When you first open the app it asks whether it may collect usage statistics (Firebase
+			Analytics: launches, time in the app, which features are used). If you allow it, an identifier
+			is used so that returning use can be recognised, your choice is remembered on this device and
+			the question is not asked again. If you decline, the app works the same and keeps your archive
+			on your device as usual, but only anonymous counts (no identifier) are sent, your choice is
+			not remembered, and the question is asked again at the next launch. Syncing across devices
+			requires allowing statistics. No personally identifiable information is collected through
+			analytics.
+		</p>
+
+		<p>
+			The website (not the app) uses Google Analytics to count visits. Its cookies are set only if
+			you accept them in the banner; if you decline, only cookieless counts are sent. You can change
+			your choice with “Cookie settings” in the footer.
 		</p>
 
 		<p>
