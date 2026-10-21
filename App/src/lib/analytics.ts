@@ -6,17 +6,12 @@ import { MEASUREMENT_ID } from './firebase';
 type Params = Record<string, string | number | boolean>;
 
 /**
- * Google Analytics in Consent Mode: until it is allowed there are no cookies, no app instance ID,
- * only anonymous counts. Allowing it switches storage on, so returning use can be recognised.
- * Only 'granted' is remembered.
- *
- * ANALYTICS_REQUIRED: this is a free promo app, so the startup popup has no way to decline and
- * the app cannot be used until statistics are allowed. Set it to false to make the popup
- * optional (Decline keeps the anonymous mode, asked again at the next launch), e.g. for a store
- * submission.
+ * One "Allow" covers saving and statistics. Until it is given the app keeps everything in memory
+ * (nothing is saved, not even locally; see $lib/storage) and Google Analytics runs in Consent
+ * Mode with analytics storage denied: no cookies, no app instance ID, only anonymous counts.
+ * Allowing switches both on; only 'granted' is remembered. A refusal is asked again at the next
+ * launch.
  */
-export const ANALYTICS_REQUIRED = true;
-
 export type AnalyticsConsent = 'granted' | 'denied';
 
 const STORAGE_KEY = 'analyticsConsent';
@@ -68,6 +63,15 @@ function applyNativeConsent(choice: AnalyticsConsent): void {
 		ConsentType.AdPersonalization
 	]) {
 		native(() => FirebaseAnalytics.setConsent({ type, status: ConsentStatus.Denied }));
+	}
+}
+
+/** Whether the user has allowed saving (read straight from storage, so it is valid before init). */
+export function hasStoredConsent(): boolean {
+	try {
+		return browser && localStorage.getItem(STORAGE_KEY) === 'granted';
+	} catch {
+		return false;
 	}
 }
 

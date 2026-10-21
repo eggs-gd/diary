@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { useI18n } from '$lib/i18n';
-	import { ANALYTICS_REQUIRED } from '$lib/analytics';
 	import { AppButton, AppPopup } from '$lib/components/ui';
 	import { analyticsConsent } from '$lib/state/analytics-consent.svelte';
 
@@ -11,13 +10,12 @@
 	open={analyticsConsent.prompt}
 	title={i18n.t('analytics.title')}
 	titleId="analytics-consent-title"
-	dismissible={!ANALYTICS_REQUIRED}
 	closeLabel={i18n.t('analytics.decline')}
 	onClose={() => analyticsConsent.decline()}
 >
 	{#snippet children()}
 		<div class="consent-body">
-			<p>{i18n.t(ANALYTICS_REQUIRED ? 'analytics.bodyRequired' : 'analytics.body')}</p>
+			<p>{i18n.t('analytics.body')}</p>
 			<a
 				class="consent-privacy"
 				href="https://journal.eggs.gd/privacy"
@@ -30,7 +28,7 @@
 	{/snippet}
 
 	{#snippet footer()}
-		<AppButton variant="secondary" onclick={() => analyticsConsent.allow()}>
+		<AppButton variant="secondary" onclick={() => void analyticsConsent.allow()}>
 			{i18n.t('analytics.allow')}
 		</AppButton>
 	{/snippet}

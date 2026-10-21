@@ -1,12 +1,15 @@
-import { initAnalytics, setAnalyticsConsent } from '$lib/analytics';
+import { hasStoredConsent, initAnalytics, setAnalyticsConsent } from '$lib/analytics';
+import { enablePersistence } from '$lib/storage';
+import { dayReflectionStore } from '$lib/state/day-reflections.svelte';
+import { eventStore } from '$lib/state/events.svelte';
 
 /**
- * Analytics consent as UI state. Anonymous counts always run; allowing identifiers is asked at every
- * launch until the user says yes (only 'granted' is remembered).
+ * One "Allow" covers saving the archive on the device and usage statistics. Without it the app is
+ * session-only; the popup comes back at the next launch.
  */
 class AnalyticsConsentStore {
 	granted = $state(false);
-	/** Show the startup prompt. */
+	/** Show the popup. */
 	prompt = $state(false);
 
 	init(): void {
@@ -14,20 +17,22 @@ class AnalyticsConsentStore {
 		this.prompt = !this.granted;
 	}
 
-	allow(): void {
+	/** Opens the popup again (e.g. when a feature that needs saving is used). */
+	ask(): void {
+		if (!hasStoredConsent()) this.prompt = true;
+	}
+
+	async allow(): Promise<void> {
+		this.prompt = false;
+		await enablePersistence();
 		setAnalyticsConsent('granted');
 		this.granted = true;
-		this.prompt = false;
+		await Promise.all([eventStore.load(), dayReflectionStore.load()]);
 	}
 
-	/** Keeps the anonymous mode for this session; the prompt comes back next launch. */
+	/** Keeps the session-only mode; the popup returns next launch. */
 	decline(): void {
 		this.prompt = false;
-	}
-
-	revoke(): void {
-		setAnalyticsConsent('denied');
-		this.granted = false;
 	}
 }
 
