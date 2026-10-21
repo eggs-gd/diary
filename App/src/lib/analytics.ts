@@ -6,10 +6,10 @@ import { MEASUREMENT_ID } from './firebase';
 type Params = Record<string, string | number | boolean>;
 
 /**
- * Anonymous by default. Until the user allows analytics, Google Analytics runs in Consent Mode with
- * analytics storage denied: no cookies, no app instance ID, only anonymous counts. Allowing it
- * switches storage on, so returning use can be recognised. Only 'granted' is remembered; a refusal
- * is asked again at the next launch.
+ * Anonymous by default. Google Analytics runs in Consent Mode with analytics storage denied: no
+ * cookies, no app instance ID, only anonymous counts. Signing in for sync switches storage on (see
+ * the auth store), so returning use can be recognised; signing out returns to anonymous. The
+ * granted state is remembered locally so it applies from the first event of the next launch.
  */
 export type AnalyticsConsent = 'granted' | 'denied';
 
@@ -79,7 +79,7 @@ export function initAnalytics(): AnalyticsConsent {
 	return consent;
 }
 
-/** Applies a new choice. Only 'granted' is stored. */
+/** Applies a new state. Only 'granted' is stored. */
 export function setAnalyticsConsent(choice: AnalyticsConsent): void {
 	consent = choice;
 	try {

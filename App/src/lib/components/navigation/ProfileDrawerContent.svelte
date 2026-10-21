@@ -5,7 +5,6 @@
 	import LocaleSwitcher from '$lib/components/LocaleSwitcher.svelte';
 	import ReflectionEnabledSwitcher from '$lib/components/ReflectionEnabledSwitcher.svelte';
 	import WeekStartSwitcher from '$lib/components/WeekStartSwitcher.svelte';
-	import { analyticsConsent } from '$lib/state/analytics-consent.svelte';
 	import { authStore } from '$lib/state/auth.svelte';
 	import { syncController } from '$lib/sync/controller.svelte';
 
@@ -116,17 +115,6 @@
 		</FieldLabel>
 		<ReflectionEnabledSwitcher labelledBy="profile-reflection-feature-heading" />
 	</div>
-
-	{#if analyticsConsent.granted}
-		<div class="locale-row">
-			<FieldLabel size="row">
-				<span>{i18n.t('analytics.on')}</span>
-			</FieldLabel>
-			<AppButton variant="text" onclick={() => analyticsConsent.revoke()}>
-				{i18n.t('analytics.turnOff')}
-			</AppButton>
-		</div>
-	{/if}
 
 	<AppButton variant="secondary" fullWidth onclick={onOpenArchive}>
 		{i18n.t('profile.clearArchive')}
