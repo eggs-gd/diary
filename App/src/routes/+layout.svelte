@@ -4,6 +4,8 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import ScrollToTop from '$lib/components/ScrollToTop.svelte';
 	import { track } from '$lib/analytics';
+	import AnalyticsConsentPopup from '$lib/components/AnalyticsConsentPopup.svelte';
+	import { analyticsConsent } from '$lib/state/analytics-consent.svelte';
 	import { initI18n, useI18n } from '$lib/i18n';
 	import { initDayEnd, initReflectionEnabled, initWeekStart } from '$lib/preferences';
 	import { initNativePlatform, teardownNativePlatform } from '$lib/platform/native';
@@ -26,14 +28,23 @@
 	});
 
 	onMount(() => {
+		analyticsConsent.init();
 		track('app_open');
 		authStore.init();
 		void initNativePlatform(() => {
 			handleAppBack();
 		});
 
+		// Time in the app, reported coarsely each time it goes to the background.
+		let visibleSince = performance.now();
 		const onVisible = () => {
-			if (document.visibilityState === 'visible') syncController.resumeSync();
+			if (document.visibilityState === 'visible') {
+				visibleSince = performance.now();
+				syncController.resumeSync();
+			} else {
+				const seconds = Math.round((performance.now() - visibleSince) / 1000);
+				if (seconds > 0) track('app_background', { engaged_s: seconds });
+			}
 		};
 		document.addEventListener('visibilitychange', onVisible);
 
@@ -51,6 +62,8 @@
 	<meta name="application-name" content={i18n.t('app.title')} />
 	<meta name="apple-mobile-web-app-title" content={i18n.t('app.title')} />
 </svelte:head>
+
+<AnalyticsConsentPopup />
 
 <div class="app">
 	<div class="scroll-top-bar">
