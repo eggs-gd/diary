@@ -5,63 +5,27 @@ import type { DayReflectionRepository } from './day-reflection-repository';
 import { SqliteDayReflectionRepository } from './day-reflection-sqlite';
 import { LocalEventRepository } from './event-local';
 import type { EventRepository } from './event-repository';
-import { MemoryDayReflectionRepository } from './day-reflection-memory';
-import { MemoryEventRepository } from './event-memory';
-import { hasStoredConsent } from '$lib/analytics';
 import { SqliteEventRepository } from './event-sqlite';
 
-let persistentEvents: EventRepository | null = null;
-let persistentReflections: DayReflectionRepository | null = null;
-let memoryEvents: MemoryEventRepository | null = null;
-let memoryReflections: MemoryDayReflectionRepository | null = null;
+let repository: EventRepository | null = null;
+let dayReflectionRepository: DayReflectionRepository | null = null;
 
-function getPersistentEvents(): EventRepository {
-	if (!persistentEvents) {
-		persistentEvents = Capacitor.isNativePlatform()
+function getRepository(): EventRepository {
+	if (!repository) {
+		repository = Capacitor.isNativePlatform()
 			? new SqliteEventRepository()
 			: new LocalEventRepository();
 	}
-	return persistentEvents;
-}
-
-function getPersistentReflections(): DayReflectionRepository {
-	if (!persistentReflections) {
-		persistentReflections = Capacitor.isNativePlatform()
-			? new SqliteDayReflectionRepository()
-			: new LocalDayReflectionRepository();
-	}
-	return persistentReflections;
-}
-
-/** Saves to the device only after the user allowed it; until then everything is session-only. */
-function getRepository(): EventRepository {
-	if (hasStoredConsent()) return getPersistentEvents();
-	memoryEvents ??= new MemoryEventRepository();
-	return memoryEvents;
+	return repository;
 }
 
 function getDayReflectionRepository(): DayReflectionRepository {
-	if (hasStoredConsent()) return getPersistentReflections();
-	memoryReflections ??= new MemoryDayReflectionRepository();
-	return memoryReflections;
-}
-
-/** Called when the user allows saving: moves what was written this session onto the device. */
-export async function enablePersistence(): Promise<void> {
-	if (memoryEvents) {
-		const session = await memoryEvents.loadAll();
-		const target = getPersistentEvents();
-		await target.ensureReady();
-		for (const entry of [...session].reverse()) await target.save(entry);
-		memoryEvents = null;
+	if (!dayReflectionRepository) {
+		dayReflectionRepository = Capacitor.isNativePlatform()
+			? new SqliteDayReflectionRepository()
+			: new LocalDayReflectionRepository();
 	}
-	if (memoryReflections) {
-		const session = await memoryReflections.loadAll();
-		const target = getPersistentReflections();
-		await target.ensureReady();
-		for (const reflection of session) await target.save(reflection);
-		memoryReflections = null;
-	}
+	return dayReflectionRepository;
 }
 
 export async function ensureEventsReady(): Promise<void> {

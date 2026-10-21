@@ -95,11 +95,12 @@
 		"deleteSelected": "Delete selected ({count})"
 	},
 	"analytics": {
-		"title": "Save and statistics",
-		"body": "Allow the app to save your archive on this device and to collect usage statistics. Without it nothing is saved, not even locally: you work within this session and start from scratch every time. Only anonymous counts (launches, time in the app) are sent.",
+		"title": "Anonymous statistics",
+		"body": "Help improve the app by allowing usage statistics. If you decline, everything still works and only anonymous counts are sent (launches, time in the app), with no identifier stored on your device.",
 		"allow": "Allow",
 		"decline": "Decline",
-		"privacy": "Privacy policy"
+		"privacy": "Privacy policy",
+		"syncNeeds": "Syncing needs usage statistics to be allowed."
 	},
 	"sync": {
 		"label": "Sync",

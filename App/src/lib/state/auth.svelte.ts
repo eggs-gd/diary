@@ -89,9 +89,9 @@ class AuthStore {
 
 	async signIn(): Promise<void> {
 		if (this.busy || !this.available) return;
-		// Sync needs the app to be allowed to save; otherwise ask first.
+		// Syncing needs usage statistics to be allowed: ask first, then carry on.
 		if (!analyticsConsent.granted) {
-			analyticsConsent.ask();
+			analyticsConsent.askFor('sync', () => void this.signIn());
 			return;
 		}
 		this.busy = true;

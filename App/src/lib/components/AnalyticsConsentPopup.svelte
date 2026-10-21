@@ -16,6 +16,9 @@
 	{#snippet children()}
 		<div class="consent-body">
 			<p>{i18n.t('analytics.body')}</p>
+			{#if analyticsConsent.reason === 'sync'}
+				<p>{i18n.t('analytics.syncNeeds')}</p>
+			{/if}
 			<a
 				class="consent-privacy"
 				href="https://journal.eggs.gd/privacy"
@@ -28,7 +31,7 @@
 	{/snippet}
 
 	{#snippet footer()}
-		<AppButton variant="secondary" onclick={() => void analyticsConsent.allow()}>
+		<AppButton variant="secondary" onclick={() => analyticsConsent.allow()}>
 			{i18n.t('analytics.allow')}
 		</AppButton>
 	{/snippet}
