@@ -40,9 +40,11 @@
 		<h2>Analytics</h2>
 
 		<p>
-			The app uses Firebase Analytics to collect anonymous usage statistics. This information helps
-			improve the app and may include events such as app launches, screen views, and feature usage.
-			No personally identifiable information is collected through analytics.
+			By default the app counts usage anonymously: launches, time in the app and which features are used,
+			with no identifier stored on your device. If you allow usage statistics when the app asks, it
+			also uses an identifier (Firebase Analytics) so that returning use can be recognised. You can turn
+			this off again in the app. If you decline, the app works the same and asks again at the next
+			launch. No personally identifiable information is collected through analytics.
 		</p>
 
 		<p>
