@@ -5,7 +5,7 @@
 
 <Seo
 	title="Privacy Policy · Attention Journal"
-	description="Privacy Policy for Attention Journal. Last updated: September 2026."
+	description="Privacy Policy for Attention Journal. Last updated: October 2026."
 	path="/privacy"
 />
 
@@ -14,7 +14,7 @@
 
 	<article class="policy">
 		<h1>Privacy Policy</h1>
-		<p class="updated">Last updated: September 2026</p>
+		<p class="updated">Last updated: October 2026</p>
 
 		<p>Attention Journal respects your privacy.</p>
 
@@ -43,6 +43,12 @@
 			The app uses Firebase Analytics to collect anonymous usage statistics. This information helps
 			improve the app and may include events such as app launches, screen views, and feature usage.
 			No personally identifiable information is collected through analytics.
+		</p>
+
+		<p>
+			The website (not the app) uses Google Analytics to count visits. Its cookies are set only if
+			you accept them in the banner; if you decline, only cookieless counts are sent. You can change
+			your choice with “Cookie settings” in the footer.
 		</p>
 
 		<p>

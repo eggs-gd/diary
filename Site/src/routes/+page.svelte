@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { base } from '$app/paths';
 	import Seo from '$lib/Seo.svelte';
+	import { reopenConsent } from '$lib/analytics/consent';
 	import { HOME_DESCRIPTION, HOME_TITLE, jsonLdHome } from '$lib/seo';
 
 	const features = [
@@ -58,8 +59,8 @@
 
 		<p>
 			While Shape of Momentum looks outward at the form of a moment, 觀明 looks inward at the form
-			of perception. Your archive stays on your device by default, in one calm stream. Optional
-			sync can mirror it to your other signed-in devices.
+			of perception. Your archive stays on your device by default, in one calm stream. Optional sync
+			can mirror it to your other signed-in devices.
 		</p>
 
 		<p class="closing">
@@ -126,5 +127,6 @@
 		<span>© 2026 earwiG Games</span>
 		<a href="https://eggs.gd">eggs.gd</a>
 		<a href="{base}/privacy">Privacy Policy</a>
+		<button type="button" class="cookie-link" onclick={reopenConsent}>Cookie settings</button>
 	</footer>
 </main>
