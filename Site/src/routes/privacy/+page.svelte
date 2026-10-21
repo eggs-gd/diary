@@ -1,14 +1,13 @@
 <script lang="ts">
 	import { base } from '$app/paths';
+	import Seo from '$lib/Seo.svelte';
 </script>
 
-<svelte:head>
-	<title>Privacy Policy · Attention Journal</title>
-	<meta
-		name="description"
-		content="Privacy Policy for Attention Journal. Last updated: September 2026."
-	/>
-</svelte:head>
+<Seo
+	title="Privacy Policy · Attention Journal"
+	description="Privacy Policy for Attention Journal. Last updated: September 2026."
+	path="/privacy"
+/>
 
 <main class="policy-page">
 	<a class="back-link" href="{base}/">Attention Journal</a>

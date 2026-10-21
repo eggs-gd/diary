@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { base } from '$app/paths';
+	import Seo from '$lib/Seo.svelte';
+	import { HOME_DESCRIPTION, HOME_TITLE, jsonLdHome } from '$lib/seo';
 
 	const features = [
 		'One-tap capture of any event',
@@ -15,18 +17,7 @@
 	];
 </script>
 
-<svelte:head>
-	<title>Attention Journal · 觀明</title>
-	<meta
-		name="description"
-		content="A quiet archive of attention. Capture what happened, return later, and see it more clearly."
-	/>
-	<meta property="og:title" content="Attention Journal · 觀明" />
-	<meta
-		property="og:description"
-		content="Not a diary — an archive of attention. Capture the moment, return later, and see it more clearly."
-	/>
-</svelte:head>
+<Seo title={HOME_TITLE} description={HOME_DESCRIPTION} path="/" jsonLd={jsonLdHome} />
 
 <main class="page">
 	<section class="intro" aria-labelledby="app-title">
@@ -48,6 +39,13 @@
 			Capture an event the instant it happens — a thought, a message, a moment that caught your
 			attention. Later, when you are ready, return to it: notice the story you told yourself, and
 			ask whether another reading is just as true.
+		</p>
+
+		<p>
+			It works like a thought journal: write down what happened, return when you are ready, and set
+			the story you told yourself beside other readings of the same moment. The approach is inspired
+			by the thought records used in cognitive behavioral therapy. Attention Journal is a personal
+			reflection tool, not therapy, and it makes no medical claims.
 		</p>
 
 		<p>Features:</p>
@@ -125,7 +123,8 @@
 	</section>
 
 	<footer>
-		<span>Copyright 2026 eGGs.gd</span>
+		<span>© 2026 earwiG Games</span>
+		<a href="https://eggs.gd">eggs.gd</a>
 		<a href="{base}/privacy">Privacy Policy</a>
 	</footer>
 </main>
