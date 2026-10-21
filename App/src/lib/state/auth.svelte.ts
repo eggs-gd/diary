@@ -1,7 +1,7 @@
 import { browser } from '$app/environment';
 import { Capacitor } from '@capacitor/core';
 import { firebaseApp } from '$lib/firebase';
-import { setAnalyticsConsent, track } from '$lib/analytics';
+import { track } from '$lib/analytics';
 
 export interface AuthUser {
 	uid: string;
@@ -69,8 +69,6 @@ class AuthStore {
 				this.#listening = true;
 				m.onAuthStateChanged(this.#auth, (u) => {
 					this.user = u ? { uid: u.uid, email: u.email, name: u.displayName } : null;
-					// Signing in for sync also turns on usage statistics; signing out returns to anonymous counts.
-					setAnalyticsConsent(u ? 'granted' : 'denied');
 					this.ready = true;
 				});
 				if (!this.#native) {

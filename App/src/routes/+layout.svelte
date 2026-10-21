@@ -3,7 +3,9 @@
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import ScrollToTop from '$lib/components/ScrollToTop.svelte';
-	import { initAnalytics, track } from '$lib/analytics';
+	import { track } from '$lib/analytics';
+	import AnalyticsConsentPopup from '$lib/components/AnalyticsConsentPopup.svelte';
+	import { analyticsConsent } from '$lib/state/analytics-consent.svelte';
 	import { initI18n, useI18n } from '$lib/i18n';
 	import { initDayEnd, initReflectionEnabled, initWeekStart } from '$lib/preferences';
 	import { initNativePlatform, teardownNativePlatform } from '$lib/platform/native';
@@ -26,7 +28,7 @@
 	});
 
 	onMount(() => {
-		initAnalytics();
+		analyticsConsent.init();
 		track('app_open');
 		authStore.init();
 		void initNativePlatform(() => {
@@ -60,6 +62,8 @@
 	<meta name="application-name" content={i18n.t('app.title')} />
 	<meta name="apple-mobile-web-app-title" content={i18n.t('app.title')} />
 </svelte:head>
+
+<AnalyticsConsentPopup />
 
 <div class="app">
 	<div class="scroll-top-bar">
