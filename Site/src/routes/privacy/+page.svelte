@@ -41,10 +41,10 @@
 
 		<p>
 			By default the app counts usage anonymously: launches, time in the app and which features are
-			used, with no identifier stored on your device. If you allow usage statistics when the app
-			asks, it also uses an identifier (Firebase Analytics) so that returning use can be recognised.
-			You can turn this off again in the app. If you decline, the app works the same and asks again
-			at the next launch. No personally identifiable information is collected through analytics.
+			used, with no identifier stored on your device. If you sign in to sync your archive, usage
+			statistics (Firebase Analytics) also use an identifier, so that returning use can be
+			recognised; signing out returns to anonymous counts. No personally identifiable information is
+			collected through analytics.
 		</p>
 
 		<p>
