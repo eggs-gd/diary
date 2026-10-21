@@ -94,6 +94,14 @@
 		"selectAll": "Select all",
 		"deleteSelected": "Delete selected ({count})"
 	},
+	"analytics": {
+		"title": "Anonymous statistics",
+		"body": "Help improve the app by allowing usage statistics. If you decline, everything still works and only anonymous counts are sent (launches, time in the app), with no identifier stored on your device.",
+		"allow": "Allow",
+		"decline": "Decline",
+		"privacy": "Privacy policy",
+		"syncNeeds": "Syncing needs usage statistics to be allowed."
+	},
 	"sync": {
 		"label": "Sync",
 		"signIn": "Sign in to sync",
