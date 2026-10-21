@@ -37,16 +37,17 @@
 			Firebase. To have your synced data removed, contact us at the address below.
 		</p>
 
-		<h2>Saving and analytics</h2>
+		<h2>Analytics</h2>
 
 		<p>
-			When you first open the app it asks whether it may save your archive on this device and
-			collect usage statistics (Firebase Analytics: launches, time in the app, which features are
-			used). If you allow it, the archive is saved locally and an identifier is used so that
-			returning use can be recognised. If you decline, nothing is saved, not even locally: the app
-			works within the session and starts from scratch every time, and only anonymous counts (no
-			identifier) are sent. The question is asked again at every launch until you allow it. No
-			personally identifiable information is collected through analytics.
+			When you first open the app it asks whether it may collect usage statistics (Firebase
+			Analytics: launches, time in the app, which features are used). If you allow it, an identifier
+			is used so that returning use can be recognised, your choice is remembered on this device and
+			the question is not asked again. If you decline, the app works the same and keeps your archive
+			on your device as usual, but only anonymous counts (no identifier) are sent, your choice is
+			not remembered, and the question is asked again at the next launch. Syncing across devices
+			requires allowing statistics. No personally identifiable information is collected through
+			analytics.
 		</p>
 
 		<p>
