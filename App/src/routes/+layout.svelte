@@ -43,7 +43,7 @@
 				syncController.resumeSync();
 			} else {
 				const seconds = Math.round((performance.now() - visibleSince) / 1000);
-				if (seconds > 0) track('app_background', { engaged_s: seconds });
+				if (seconds > 0) track('app_hidden', { engaged_s: seconds });
 			}
 		};
 		document.addEventListener('visibilitychange', onVisible);
