@@ -8,6 +8,32 @@
 			function gtag() {
 				dataLayer.push(arguments);
 			}
+			// Consent policy for analytics: one switch per site.
+			// 'granted' = no banner, Google Analytics cookies on (the current behaviour).
+			// 'denied'  = Consent Mode: nothing is stored until a banner calls setAnalyticsConsent('granted').
+			var ANALYTICS_CONSENT = 'granted';
+			gtag('consent', 'default', {
+				analytics_storage: ANALYTICS_CONSENT,
+				ad_storage: 'denied',
+				ad_user_data: 'denied',
+				ad_personalization: 'denied',
+				wait_for_update: 500
+			});
+			window.setAnalyticsConsent = function (choice) {
+				try {
+					localStorage.setItem('analyticsConsent', choice);
+				} catch (e) {}
+				gtag('consent', 'update', { analytics_storage: choice });
+			};
+			try {
+				// A returning visitor's choice must be in place before the first page view.
+				if (
+					ANALYTICS_CONSENT === 'denied' &&
+					localStorage.getItem('analyticsConsent') === 'granted'
+				) {
+					gtag('consent', 'update', { analytics_storage: 'granted' });
+				}
+			} catch (e) {}
 			gtag('js', new Date());
 			gtag('config', 'G-W7F2PWQ270');
 
