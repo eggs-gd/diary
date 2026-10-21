@@ -37,13 +37,16 @@
 			Firebase. To have your synced data removed, contact us at the address below.
 		</p>
 
-		<h2>Analytics</h2>
+		<h2>Saving and analytics</h2>
 
 		<p>
-			The app is free and uses Firebase Analytics to collect usage statistics (launches, time in the
-			app, which features are used). When you first open the app it asks you to allow this; the app
-			cannot be used without allowing it, and once allowed, an identifier is used so that returning
-			use can be recognised. No personally identifiable information is collected through analytics.
+			When you first open the app it asks whether it may save your archive on this device and
+			collect usage statistics (Firebase Analytics: launches, time in the app, which features are
+			used). If you allow it, the archive is saved locally and an identifier is used so that
+			returning use can be recognised. If you decline, nothing is saved, not even locally: the app
+			works within the session and starts from scratch every time, and only anonymous counts (no
+			identifier) are sent. The question is asked again at every launch until you allow it. No
+			personally identifiable information is collected through analytics.
 		</p>
 
 		<p>
