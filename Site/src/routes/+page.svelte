@@ -31,11 +31,12 @@
 		'One-tap capture of any event or act',
 		'A day report that adds everything up',
 		'Optional reflection: a few short questions and a second score',
+		'Send any entry to the I Ching for another point of view',
 		'Archive and calendar',
 		'On iOS and Android, the system share sheet sends messages, notes and quotes straight in',
 		'English and Ukrainian',
 		'No account required, your archive stays on your device',
-		'Optional sync across your devices',
+		'Optional sync across your devices, with the full history kept',
 		'No social features, no feeds, no notifications'
 	];
 </script>
@@ -148,6 +149,14 @@
 			do next time), then score it again. Sometimes the second score is very different from the first.
 		</p>
 
+		<h2>A look from the side</h2>
+
+		<p>
+			Any entry can be sent, as it is, to the <a href="https://iching.eggs.gd">I Ching</a>: its web
+			app opens with your entry as the question and casts a hexagram at once. It is not an answer,
+			only another angle on the same moment, and nothing changes in your journal.
+		</p>
+
 		<div class="more">
 			<h2>Why so short</h2>
 
@@ -170,7 +179,7 @@
 
 			<p>
 				Your archive stays on your device by default, in one calm stream. No account is needed. Sync
-				across your devices is optional.
+				across your devices is optional, and when you turn it on the whole history comes along.
 			</p>
 
 			<h2>What is in it</h2>
