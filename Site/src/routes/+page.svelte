@@ -53,16 +53,26 @@
 			<br />
 			and to see how the day really went.
 		</p>
+		<p class="lede">
+			A single unpleasant moment can overshadow a whole day. Written down, the day adds up
+			differently.
+		</p>
+		<a class="cta" href="{base}/pwa/" rel="external" data-cta="web_app" data-cta-placement="hero">
+			Open the Web App <span aria-hidden="true">→</span>
+		</a>
 	</section>
 
 	<section class="screenshots" aria-label="Screenshots">
 		{#each screenshots as screenshot}
-			<img
-				src="{base}/screenshots/{screenshot.src}"
-				alt={screenshot.alt}
-				width="1242"
-				height="2688"
-			/>
+			<a href="{base}/screenshots/{screenshot.src}" target="_blank" rel="noopener">
+				<img
+					src="{base}/screenshots/{screenshot.src}"
+					alt={screenshot.alt}
+					title="Open full size"
+					width="1242"
+					height="2688"
+				/>
+			</a>
 		{/each}
 	</section>
 
@@ -87,48 +97,50 @@
 			do next time), then score it again. Sometimes the second score is very different from the first.
 		</p>
 
-		<h2>Why so short</h2>
+		<div class="more">
+			<h2>Why so short</h2>
 
-		<p>
-			The approach is inspired by the thought records used in cognitive behavioural therapy, heavily
-			simplified. A full worksheet can ask ten questions for a single emotion. This asks a few, on
-			purpose: it is built for casual daily use, so that capturing even the smallest thing stays
-			easy.
-		</p>
+			<p>
+				The approach is inspired by the thought records used in cognitive behavioural therapy,
+				heavily simplified. A full worksheet can ask ten questions for a single emotion. This asks a
+				few, on purpose: it is built for casual daily use, so that capturing even the smallest thing
+				stays easy.
+			</p>
 
-		<h2>What it is not</h2>
+			<h2>What it is not</h2>
 
-		<p>
-			It is not therapy, medical advice or a complete method, and it does not diagnose or treat
-			anything. It is a personal reflection tool. If you are struggling, please talk to a
-			professional.
-		</p>
+			<p>
+				It is not therapy, medical advice or a complete method, and it does not diagnose or treat
+				anything. It is a personal reflection tool. If you are struggling, please talk to a
+				professional.
+			</p>
 
-		<h2>Your data</h2>
+			<h2>Your data</h2>
 
-		<p>
-			Your archive stays on your device by default, in one calm stream. No account is needed. Sync
-			across your devices is optional.
-		</p>
+			<p>
+				Your archive stays on your device by default, in one calm stream. No account is needed. Sync
+				across your devices is optional.
+			</p>
 
-		<h2>What is in it</h2>
+			<h2>What is in it</h2>
 
-		<ul>
-			{#each features as feature}
-				<li>{feature}</li>
-			{/each}
-		</ul>
+			<ul>
+				{#each features as feature}
+					<li>{feature}</li>
+				{/each}
+			</ul>
 
-		<h2>Questions</h2>
+			<h2>Questions</h2>
 
-		<p>
-			<strong>Is this CBT?</strong> It borrows the shape of a thought record and cuts it down. It is not
-			a substitute for CBT.
-		</p>
+			<p>
+				<strong>Is this CBT?</strong> It borrows the shape of a thought record and cuts it down. It is
+				not a substitute for CBT.
+			</p>
 
-		<p>
-			<strong>Is it free?</strong> Yes, and it works in the browser: open the web app below.
-		</p>
+			<p>
+				<strong>Is it free?</strong> Yes, and it works in the browser: open the web app below.
+			</p>
+		</div>
 
 		<p class="closing">
 			Capture it.

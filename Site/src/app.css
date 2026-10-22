@@ -109,15 +109,63 @@ h1 {
 	scrollbar-color: var(--accent-dim) transparent;
 }
 
+.screenshots a {
+	flex: none;
+	scroll-snap-align: center;
+	cursor: zoom-in;
+}
+
 .screenshots img {
 	width: min(72vw, 19rem);
 	height: auto;
 	min-width: min(72vw, 19rem);
 	aspect-ratio: 1242 / 2688;
-	border: 1px solid var(--border);
+	border: 1px solid color-mix(in srgb, var(--accent) 34%, transparent);
 	border-radius: 1.25rem;
-	box-shadow: 0 1.5rem 4rem color-mix(in srgb, #000 36%, transparent);
-	scroll-snap-align: center;
+	box-shadow:
+		0 0 3rem color-mix(in srgb, var(--accent) 10%, transparent),
+		0 1.5rem 4rem color-mix(in srgb, #000 36%, transparent);
+	transition: border-color 0.2s ease;
+}
+
+.screenshots a:hover img,
+.screenshots a:focus-visible img {
+	border-color: var(--accent);
+}
+
+.screenshots a:focus-visible {
+	outline: none;
+}
+
+.lede {
+	max-width: 42rem;
+	margin: 0.9rem 0 0;
+	color: var(--text-muted);
+	font-size: 1.1rem;
+	font-weight: 300;
+	line-height: 1.6;
+}
+
+.cta {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	margin-top: 1.5rem;
+	padding: 0.8rem 1.4rem;
+	border: 1px solid var(--accent);
+	border-radius: 8px;
+	background: color-mix(in srgb, var(--accent) 12%, var(--bg-elevated));
+	color: var(--text);
+	font-size: 1.1rem;
+	font-weight: 500;
+	text-decoration: none;
+	transition: background 0.2s ease;
+}
+
+.cta:hover,
+.cta:focus-visible {
+	background: color-mix(in srgb, var(--accent) 24%, var(--bg-elevated));
+	outline: none;
 }
 
 .description {
@@ -142,6 +190,17 @@ h1 {
 	font-size: 1.9rem;
 	font-weight: 400;
 	line-height: 1.15;
+}
+
+/* The reference part of the page: for the reader who wants it, quieter than the rest. */
+.description .more {
+	color: var(--text-muted);
+	font-size: 1.02rem;
+	line-height: 1.65;
+}
+
+.description .more h2 {
+	font-size: 1.45rem;
 }
 
 .description strong {
