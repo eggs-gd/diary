@@ -181,6 +181,16 @@ h1 {
 	font-size: 1.45rem;
 }
 
+.description a {
+	color: var(--accent);
+	text-decoration: none;
+}
+
+.description a:hover,
+.description a:focus-visible {
+	color: var(--text);
+}
+
 .description strong {
 	color: var(--text);
 	font-weight: 500;
