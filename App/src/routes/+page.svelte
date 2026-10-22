@@ -10,9 +10,23 @@
 	import PanelDeck from '$lib/components/navigation/PanelDeck.svelte';
 	import PanelOverlay from '$lib/components/navigation/PanelOverlay.svelte';
 	import ProfileMenu from '$lib/components/ProfileMenu.svelte';
+	import { AppButton } from '$lib/components/ui';
+	import ExampleTourCard from '$lib/components/ExampleTourCard.svelte';
+	import {
+		EXAMPLE_ARGUMENT_ID,
+		createExampleDay,
+		exampleProtocol,
+		isExampleEntry
+	} from '$lib/events/example';
+	import { analyticsConsent } from '$lib/state/analytics-consent.svelte';
 	import { ChromeRoundButton } from '$lib/components/chrome';
 	import '$lib/components/chrome/chrome-layout.css';
-	import { entriesForDay, formatDayLabel, createdAtForDayKey } from '$lib/events/grouping';
+	import {
+		entriesForDay,
+		formatDayLabel,
+		createdAtForDayKey,
+		localDateKey
+	} from '$lib/events/grouping';
 	import type { EventKind } from '$lib/events/types';
 	import { buildArchiveView } from '$lib/events/archive-view';
 	import type { EventEntry } from '$lib/events/types';
@@ -117,6 +131,33 @@
 
 	async function handleCaptureSave(entry: EventEntry): Promise<void> {
 		await eventStore.add(entry);
+		analyticsConsent.offer();
+	}
+
+	const exampleIds = $derived(eventStore.entries.filter(isExampleEntry).map((e) => e.id));
+
+	/** Adds yesterday's sample day and shows how it adds up, still in the simple mode. */
+	async function addExample(): Promise<void> {
+		const entries = createExampleDay(i18n.locale);
+		for (const entry of entries) await eventStore.add(entry);
+		track('example_added');
+		openDayReflection(localDateKey(entries[0].createdAt, dayEnd.hour));
+	}
+
+	/** Turns the reflection mode on and fills in the sample reflection for the −7 entry. */
+	async function showReflectionDemo(): Promise<void> {
+		const target = entryById(EXAMPLE_ARGUMENT_ID);
+		if (!target) return;
+		reflection.setEnabled(true);
+		const updated = { ...target, protocol: exampleProtocol(target, i18n.locale) };
+		await eventStore.update(updated);
+		track('example_reflection_shown');
+		openAnalysis(updated);
+	}
+
+	async function removeExample(): Promise<void> {
+		await eventStore.deleteByIds(exampleIds);
+		track('example_removed');
 	}
 
 	function openAnalysis(entry: EventEntry): void {
@@ -266,8 +307,27 @@
 		<main class="main journal-panel">
 			<section class="archive" use:trackVisible={{ event: 'archive_viewed' }}>
 				{#if eventStore.entries.length === 0}
-					<p class="empty">{i18n.t('archive.empty')}</p>
+					{#if eventStore.loaded}
+						<div class="empty">
+							<p>{i18n.t('archive.emptyIntro')}</p>
+							<div class="empty-actions">
+								<AppButton variant="primary" onclick={() => openCapture()}>
+									{i18n.t('archive.emptyAdd')}
+								</AppButton>
+								<AppButton variant="secondary" onclick={() => void addExample()}>
+									{i18n.t('archive.emptyExample')}
+								</AppButton>
+							</div>
+						</div>
+					{/if}
 				{:else}
+					{#if exampleIds.length > 0}
+						<ExampleTourCard
+							reflectionOn={enableReflection}
+							onShowReflection={() => void showReflectionDemo()}
+							onRemove={() => void removeExample()}
+						/>
+					{/if}
 					<ArchiveList
 						{archiveView}
 						{enableReflection}
@@ -410,5 +470,15 @@
 		margin-top: var(--space-4);
 		padding: var(--space-5) 0;
 		color: var(--text-muted);
+	}
+
+	.empty p {
+		margin: 0 0 var(--space-4);
+	}
+
+	.empty-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-2);
 	}
 </style>
