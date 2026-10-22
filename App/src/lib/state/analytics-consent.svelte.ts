@@ -35,6 +35,9 @@ class AnalyticsConsentStore {
 			afterAllow();
 			return;
 		}
+		// Asking for sync counts as the session's offer, so a refusal here is not followed by the
+		// automatic popup after the first action. Later sync taps still ask again.
+		this.#offered = true;
 		this.reason = reason;
 		this.#afterAllow = afterAllow;
 		this.prompt = true;
