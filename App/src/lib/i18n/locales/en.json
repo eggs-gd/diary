@@ -19,6 +19,9 @@
 	"archive": {
 		"title": "Attention Journal",
 		"empty": "Quiet for now. Your first events will appear after saving.",
+		"emptyIntro": "Capture what caught your attention: an event, or something you did. Then take a closer look with two to four short questions.",
+		"emptyAdd": "Add the first entry",
+		"emptyExample": "See an example",
 		"reflectEmpty": "Start reflection",
 		"reflectPartial": "Continue reflection",
 		"reflectComplete": "Update reflection",

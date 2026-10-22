@@ -10,6 +10,9 @@
 	import PanelDeck from '$lib/components/navigation/PanelDeck.svelte';
 	import PanelOverlay from '$lib/components/navigation/PanelOverlay.svelte';
 	import ProfileMenu from '$lib/components/ProfileMenu.svelte';
+	import { AppButton } from '$lib/components/ui';
+	import { createExampleEntry } from '$lib/events/example';
+	import { analyticsConsent } from '$lib/state/analytics-consent.svelte';
 	import { ChromeRoundButton } from '$lib/components/chrome';
 	import '$lib/components/chrome/chrome-layout.css';
 	import { entriesForDay, formatDayLabel, createdAtForDayKey } from '$lib/events/grouping';
@@ -117,6 +120,17 @@
 
 	async function handleCaptureSave(entry: EventEntry): Promise<void> {
 		await eventStore.add(entry);
+		analyticsConsent.offer();
+	}
+
+	async function addExample(): Promise<void> {
+		const entry = createExampleEntry(i18n.locale);
+		await eventStore.add(entry);
+		track('example_added');
+		// The reflection questions are hidden in events mode (the default), so the example turns the
+		// reflection mode on; it can be switched back in the profile.
+		reflection.setEnabled(true);
+		openAnalysis(entry);
 	}
 
 	function openAnalysis(entry: EventEntry): void {
@@ -266,7 +280,19 @@
 		<main class="main journal-panel">
 			<section class="archive" use:trackVisible={{ event: 'archive_viewed' }}>
 				{#if eventStore.entries.length === 0}
-					<p class="empty">{i18n.t('archive.empty')}</p>
+					{#if eventStore.loaded}
+						<div class="empty">
+							<p>{i18n.t('archive.emptyIntro')}</p>
+							<div class="empty-actions">
+								<AppButton variant="primary" onclick={() => openCapture()}>
+									{i18n.t('archive.emptyAdd')}
+								</AppButton>
+								<AppButton variant="secondary" onclick={() => void addExample()}>
+									{i18n.t('archive.emptyExample')}
+								</AppButton>
+							</div>
+						</div>
+					{/if}
 				{:else}
 					<ArchiveList
 						{archiveView}
@@ -410,5 +436,15 @@
 		margin-top: var(--space-4);
 		padding: var(--space-5) 0;
 		color: var(--text-muted);
+	}
+
+	.empty p {
+		margin: 0 0 var(--space-4);
+	}
+
+	.empty-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-2);
 	}
 </style>
