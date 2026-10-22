@@ -4,17 +4,39 @@
 	import { reopenConsent } from '$lib/analytics/consent';
 	import { HOME_DESCRIPTION, HOME_TITLE, jsonLdHome } from '$lib/seo';
 
+	const screenshots = [
+		{
+			src: 'appstore-01-daily.png',
+			alt: 'A day in the journal: short entries, each with a small score'
+		},
+		{
+			src: 'appstore-02-day-report.png',
+			alt: 'The day report: events that brought joy and events that upset, with the day score on top'
+		},
+		{
+			src: 'appstore-03-look-closer.png',
+			alt: 'Reflection mode: one short question about an upsetting event'
+		},
+		{
+			src: 'appstore-04-see-it-differently.png',
+			alt: 'The answers to the reflection questions and the score given again'
+		},
+		{
+			src: 'appstore-05-archive.png',
+			alt: 'The archive: earlier days, each with its own score'
+		}
+	];
+
 	const features = [
-		'One-tap capture of any event',
+		'One-tap capture of any event or act',
+		'A day report that adds everything up',
+		'Optional reflection: a few short questions and a second score',
+		'Archive and calendar',
 		'On iOS and Android, the system share sheet sends messages, notes and quotes straight in',
-		'Return later to reflect and reinterpret',
-		'Gentle self-respect and reflection prompts',
-		'Personal archive with calendar view',
-		'English and Ukrainian localization',
-		'No accounts required',
-		'No social features',
-		'No feeds',
-		'No notifications'
+		'English and Ukrainian',
+		'No account required, your archive stays on your device',
+		'Optional sync across your devices',
+		'No social features, no feeds, no notifications'
 	];
 </script>
 
@@ -27,29 +49,69 @@
 			<h1 id="app-title">Attention Journal</h1>
 		</div>
 		<p class="promo">
-			Not a diary — an archive of attention.
+			Not a diary — a place to jot down what caught your attention, even the smallest things,
 			<br />
-			Capture the moment, return later, and see it more clearly.
+			and to see how the day really went.
 		</p>
 	</section>
 
+	<section class="screenshots" aria-label="Screenshots">
+		{#each screenshots as screenshot}
+			<img
+				src="{base}/screenshots/{screenshot.src}"
+				alt={screenshot.alt}
+				width="1242"
+				height="2688"
+			/>
+		{/each}
+	</section>
+
 	<section class="description" aria-label="App description">
-		<p>Attention Journal is a quiet companion for reflection, not another journaling app.</p>
+		<p>
+			Attention Journal is a quiet, simple tool for noticing what catches your attention, and the
+			story you tell yourself about it.
+		</p>
+
+		<h2>Two ways to use it</h2>
 
 		<p>
-			Capture an event the instant it happens — a thought, a message, a moment that caught your
-			attention. Later, when you are ready, return to it: notice the story you told yourself, and
-			ask whether another reading is just as true.
+			<strong>Daily.</strong> Jot down events and things you did, one line each, with a quick score for
+			how it landed. That is already enough. At the end of the day the report adds everything up, and
+			big swings count for less than they feel: one bad moment does not outweigh many small good ones.
+			A day that felt rough can turn out fine.
 		</p>
 
 		<p>
-			It works like a thought journal: write down what happened, return when you are ready, and set
-			the story you told yourself beside other readings of the same moment. The approach is inspired
-			by the thought records used in cognitive behavioral therapy. Attention Journal is a personal
-			reflection tool, not therapy, and it makes no medical claims.
+			<strong>Reflection.</strong> Switch on reflection mode to look closer at an entry: up to four short
+			questions (what upset or pleased you, what it says about you, other ways to see it, what you will
+			do next time), then score it again. Sometimes the second score is very different from the first.
 		</p>
 
-		<p>Features:</p>
+		<h2>Why so short</h2>
+
+		<p>
+			The approach is inspired by the thought records used in cognitive behavioural therapy, heavily
+			simplified. A full worksheet can ask ten questions for a single emotion. This asks a few, on
+			purpose: it is built for casual daily use, so that capturing even the smallest thing stays
+			easy.
+		</p>
+
+		<h2>What it is not</h2>
+
+		<p>
+			It is not therapy, medical advice or a complete method, and it does not diagnose or treat
+			anything. It is a personal reflection tool. If you are struggling, please talk to a
+			professional.
+		</p>
+
+		<h2>Your data</h2>
+
+		<p>
+			Your archive stays on your device by default, in one calm stream. No account is needed. Sync
+			across your devices is optional.
+		</p>
+
+		<h2>What is in it</h2>
 
 		<ul>
 			{#each features as feature}
@@ -57,10 +119,15 @@
 			{/each}
 		</ul>
 
+		<h2>Questions</h2>
+
 		<p>
-			While Shape of Momentum looks outward at the form of a moment, 觀明 looks inward at the form
-			of perception. Your archive stays on your device by default, in one calm stream. Optional sync
-			can mirror it to your other signed-in devices.
+			<strong>Is this CBT?</strong> It borrows the shape of a thought record and cuts it down. It is not
+			a substitute for CBT.
+		</p>
+
+		<p>
+			<strong>Is it free?</strong> Yes, and it works in the browser: open the web app below.
 		</p>
 
 		<p class="closing">
