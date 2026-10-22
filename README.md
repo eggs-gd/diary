@@ -26,7 +26,8 @@ Design decisions are made PWA-first. See [docs/platform.md](docs/platform.md).
 
 - [App/](App/) — the SvelteKit app. Engineering guide: [App/README.md](App/README.md).
 - [Site/](Site/) — the landing page. [Site/README.md](Site/README.md).
-- [scripts/](scripts/) — copies the built PWA into the site.
+- [scripts/](scripts/) — copies the built PWA into the site; store / landing screenshots.
+- [AppStore/](AppStore/) — store images. Brief and how to regenerate: [AppStore/AppStoreImages.md](AppStore/AppStoreImages.md).
 
 Agent instructions: [AGENTS.md](AGENTS.md).
 
