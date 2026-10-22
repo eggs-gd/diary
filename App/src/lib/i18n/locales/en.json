@@ -21,7 +21,7 @@
 		"empty": "Quiet for now. Your first events will appear after saving.",
 		"emptyIntro": "Capture what caught your attention: an event, or something you did. Then take a closer look with two to four short questions.",
 		"emptyAdd": "Add the first entry",
-		"emptyExample": "See an example",
+		"emptyExample": "See an example day",
 		"reflectEmpty": "Start reflection",
 		"reflectPartial": "Continue reflection",
 		"reflectComplete": "Update reflection",
@@ -104,6 +104,13 @@
 		"decline": "Decline",
 		"privacy": "Privacy policy",
 		"syncNeeds": "Syncing needs usage statistics to be allowed."
+	},
+	"tour": {
+		"title": "An example day",
+		"simple": "This is how you live in the simple mode: jot things down, one line each, and the day report adds them up. When you want to look closer at one entry, switch on reflection mode: profile menu → Mode.",
+		"show": "Show reflection mode",
+		"reflectionOn": "Reflection mode is on for this entry. Switch it back any time in the profile menu → Mode; most days you will not need it.",
+		"remove": "Remove the example"
 	},
 	"sync": {
 		"label": "Sync",

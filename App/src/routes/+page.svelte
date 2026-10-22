@@ -11,11 +11,22 @@
 	import PanelOverlay from '$lib/components/navigation/PanelOverlay.svelte';
 	import ProfileMenu from '$lib/components/ProfileMenu.svelte';
 	import { AppButton } from '$lib/components/ui';
-	import { createExampleEntry } from '$lib/events/example';
+	import ExampleTourCard from '$lib/components/ExampleTourCard.svelte';
+	import {
+		EXAMPLE_ARGUMENT_ID,
+		createExampleDay,
+		exampleProtocol,
+		isExampleEntry
+	} from '$lib/events/example';
 	import { analyticsConsent } from '$lib/state/analytics-consent.svelte';
 	import { ChromeRoundButton } from '$lib/components/chrome';
 	import '$lib/components/chrome/chrome-layout.css';
-	import { entriesForDay, formatDayLabel, createdAtForDayKey } from '$lib/events/grouping';
+	import {
+		entriesForDay,
+		formatDayLabel,
+		createdAtForDayKey,
+		localDateKey
+	} from '$lib/events/grouping';
 	import type { EventKind } from '$lib/events/types';
 	import { buildArchiveView } from '$lib/events/archive-view';
 	import type { EventEntry } from '$lib/events/types';
@@ -123,14 +134,30 @@
 		analyticsConsent.offer();
 	}
 
+	const exampleIds = $derived(eventStore.entries.filter(isExampleEntry).map((e) => e.id));
+
+	/** Adds yesterday's sample day and shows how it adds up, still in the simple mode. */
 	async function addExample(): Promise<void> {
-		const entry = createExampleEntry(i18n.locale);
-		await eventStore.add(entry);
+		const entries = createExampleDay(i18n.locale);
+		for (const entry of entries) await eventStore.add(entry);
 		track('example_added');
-		// The reflection questions are hidden in events mode (the default), so the example turns the
-		// reflection mode on; it can be switched back in the profile.
+		openDayReflection(localDateKey(entries[0].createdAt, dayEnd.hour));
+	}
+
+	/** Turns the reflection mode on and fills in the sample reflection for the −7 entry. */
+	async function showReflectionDemo(): Promise<void> {
+		const target = entryById(EXAMPLE_ARGUMENT_ID);
+		if (!target) return;
 		reflection.setEnabled(true);
-		openAnalysis(entry);
+		const updated = { ...target, protocol: exampleProtocol(target, i18n.locale) };
+		await eventStore.update(updated);
+		track('example_reflection_shown');
+		openAnalysis(updated);
+	}
+
+	async function removeExample(): Promise<void> {
+		await eventStore.deleteByIds(exampleIds);
+		track('example_removed');
 	}
 
 	function openAnalysis(entry: EventEntry): void {
@@ -294,6 +321,13 @@
 						</div>
 					{/if}
 				{:else}
+					{#if exampleIds.length > 0}
+						<ExampleTourCard
+							reflectionOn={enableReflection}
+							onShowReflection={() => void showReflectionDemo()}
+							onRemove={() => void removeExample()}
+						/>
+					{/if}
 					<ArchiveList
 						{archiveView}
 						{enableReflection}
